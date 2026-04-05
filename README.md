@@ -62,10 +62,10 @@ gh auth status  # verify scopes: repo, read:org, project
 From the project root:
 
 ```bash
-claude remote-control --dangerously-skip-permissions --agent .claude/agents/tpm-agent.md
+claude remote-control --permission-mode bypassPermissions
 ```
 
-TPM will execute its Startup Sequence (verify auth, read org config, sync boards) then wait for your commands or run periodic sweeps. Connect to it from your phone via the Claude app using the session URL displayed in the terminal.
+TPM will execute its Startup Sequence (verify auth, read org config) and wait for your commands. Connect from your phone by opening [claude.ai/code](https://claude.ai/code) — your session will be listed there.
 
 ---
 
@@ -81,9 +81,7 @@ Host Machine
     └── Kanban boards per org (Backlog → Ready → In progress → In review → Done)
 ```
 
-TPM receives work two ways:
-1. **You tell it** — connect from phone or CLI and give it commands
-2. **Periodic sweep** — TPM scans all orgs for new issues, PRs, alerts every 30 minutes
+You connect from your phone or CLI and tell TPM what to do. It executes using `gh` commands and by spawning SWE/QA subagents.
 
 ---
 
@@ -91,7 +89,7 @@ TPM receives work two ways:
 
 ### TPM (orchestrator)
 
-Your single point of contact. Scans orgs for work, triages issues, manages kanban boards, spawns SWE/QA subagents, and provides status summaries when you connect. Does not write code.
+Your single point of contact. Triages issues, manages kanban boards, spawns SWE/QA subagents, and provides status summaries. You tell it what to do — it handles the rest. Does not write code.
 
 ### SWE subagents (ephemeral, up to N concurrent)
 

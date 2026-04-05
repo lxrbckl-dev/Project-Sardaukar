@@ -2,7 +2,7 @@
 
 ## What This Is
 
-An autonomous DevOps agent platform that manages multiple GitHub organizations. A TPM (Technical Program Manager) agent runs as the orchestrator, spawning SWE and QA subagents on demand to handle issue triage, PR management, vulnerability remediation, and kanban board tracking. The human checks in from their phone when needed — otherwise the agents handle it.
+An autonomous DevOps agent platform that manages multiple GitHub organizations. A TPM (Technical Program Manager) agent runs as the orchestrator, spawning SWE and QA subagents on demand to handle issue triage, PR management, vulnerability remediation, and kanban board tracking. You connect to TPM from your phone or CLI and tell it what to do.
 
 ## Design Principles
 
@@ -12,14 +12,14 @@ An autonomous DevOps agent platform that manages multiple GitHub organizations. 
 - **No repo settings changes** — agents can request a human to enable Dependabot or set branch protection, but cannot do it themselves.
 - **No new repos** — agents monitor and maintain existing repos only.
 - **Single source of truth for orgs** — `.claude/config/organizations.yml` is the only place org names and project board URLs are defined. Never hardcode org names in agent prompts or application code.
-- **TPM is the orchestrator** — one long-running session. SWE and QA are ephemeral subagents spawned via Claude's Agent tool. No polling, no idle processes.
+- **TPM is the orchestrator** — runs via `claude remote-control`. SWE and QA are ephemeral subagents spawned via Claude's Agent tool. You drive the work.
 - **Configurable concurrency** — `SWE_AGENT_COUNT` environment variable controls max concurrent SWE subagents (default: 3).
 
 ---
 
 ## Architecture
 
-TPM runs as a `claude remote-control` session on the host. It spawns SWE and QA subagents via the Agent tool. All communication flows through GitHub.
+TPM runs as a `claude remote-control` session on the host. It spawns SWE and QA subagents via the Agent tool. All communication flows through GitHub. Connect from your phone via [claude.ai/code](https://claude.ai/code).
 
 ```
 Host Machine
@@ -45,7 +45,7 @@ The orchestrator. Does not write code. Spawns SWE and QA subagents.
 - Respects `SWE_AGENT_COUNT` for max concurrent SWE subagents (default: 3)
 - Ranks difficulty and routes model: Low/Medium → Sonnet, High → Opus
 - Manages kanban board state across all orgs: Backlog → Ready → In progress → In review → Done
-- Auto-archives Done items after 7 days to keep the board clean (archived cards are still searchable via `is:archived`)
+- Auto-archives Done items older than 7 days on request (archived cards are still searchable via `is:archived`)
 - Handles subagent results: chains SWE → QA → Done, or escalates to human
 - Provides standup-style summary when user connects
 - Can create new issues
@@ -85,7 +85,7 @@ Does NOT: write feature code, triage issues, delete anything.
 ## Subagent Flow
 
 ```
-TPM receives work (sweep or human command)
+TPM receives work (human command)
   → Triages: what kind of work?
     → Spawns SWE subagent with full context
       → SWE does work, opens PR, returns result
@@ -119,7 +119,7 @@ TPM assesses difficulty at triage time:
 ## Dependabot Workflow (Flagship Feature)
 
 1. Dependabot flags a vulnerability
-2. TPM picks up the alert (via sweep or human command)
+2. You tell TPM to check for vulnerabilities, or point it at a specific alert
 3. TPM spawns SWE subagent with alert details and model recommendation
 4. SWE creates branch (`fix/swe-1/lodash-4.17.21`), implements fix, runs tests
 5. SWE opens PR, returns result to TPM
@@ -140,7 +140,7 @@ TPM assesses difficulty at triage time:
 | **In review** | PR opened, QA subagent reviewing |
 | **Done** | QA approved and merged, or work completed |
 
-Cards in Done for 7+ days are auto-archived during sweeps. Archived items remain searchable via `is:archived` filter in GitHub Projects.
+Cards in Done for 7+ days can be auto-archived on request. Archived items remain searchable via `is:archived` filter in GitHub Projects.
 
 ---
 
@@ -182,7 +182,7 @@ organizations:
     project_url: https://github.com/orgs/org-name/projects/1
 ```
 
-- TPM reads from this file at startup and during sweeps — org names are never hardcoded elsewhere
+- TPM reads from this file at startup — org names are never hardcoded elsewhere
 - Add/remove orgs by editing this one file
 - Each org has its own GitHub Projects kanban board
 - Agents discover repos dynamically: `gh repo list <org>`
@@ -228,7 +228,7 @@ These are non-negotiable and must be enforced in all agent definitions:
 
 | Decision | Choice | Reason |
 |----------|--------|--------|
-| Agent architecture | TPM orchestrator + ephemeral SWE/QA subagents | Direct delegation, no polling |
+| Agent architecture | TPM orchestrator + ephemeral SWE/QA subagents | Direct delegation, human-driven |
 | Subagent concurrency | Max N SWE (default 3), 1 QA at a time | Controlled via `SWE_AGENT_COUNT`, avoids merge conflicts |
 | Model routing | Sonnet (low/med), Opus (high) | Cost efficiency |
 | Multi-org | Single team, orgs via config | Simpler than duplicating agents per org |
