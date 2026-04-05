@@ -1,0 +1,26 @@
+# Environment secrets
+docker/.env
+
+# Runtime data
+queue/incoming/*
+queue/processing/*
+queue/done/*
+queue/failed/*
+sessions/*
+logs/*
+*.log
+
+# Keep directory structure with .gitkeep
+!queue/incoming/.gitkeep
+!queue/processing/.gitkeep
+!queue/done/.gitkeep
+!queue/failed/.gitkeep
+!sessions/.gitkeep
+!logs/.gitkeep
+
+# Dependencies
+node_modules/
+
+# OS
+.DS_Store
+Thumbs.db

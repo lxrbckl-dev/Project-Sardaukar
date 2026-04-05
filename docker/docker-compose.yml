@@ -1,0 +1,81 @@
+services:
+  tpm-agent:
+    build:
+      context: ./agent
+    environment:
+      - AGENT_TYPE=tpm
+      - AGENT_DEFINITION=tpm-agent.md
+      - SWE_AGENT_COUNT=${SWE_AGENT_COUNT:-3}
+    volumes:
+      - ~/.claude/auth:/home/agent/.claude/auth:ro
+      - ~/.config/gh:/home/agent/.config/gh:ro
+      - ~/.claude/projects:/home/agent/.claude/projects:rw
+      - ../queue:/data/queue
+      - ../logs:/data/logs
+      - ../sessions:/data/sessions
+      - ../.claude:/home/agent/work/.claude:ro
+    working_dir: /home/agent/work
+    # Health check: verify the session URL file exists (means claude is running)
+    healthcheck:
+      test: ["CMD", "test", "-f", "/data/sessions/tpm-url.txt"]
+      interval: 60s
+      timeout: 5s
+      retries: 3
+      start_period: 120s
+    restart: unless-stopped
+
+  webhook-listener:
+    build:
+      context: ./webhook-listener
+    ports:
+      - "3800:3800"
+    env_file:
+      - .env
+    environment:
+      - PORT=3800
+      - QUEUE_DIR=/data/queue/incoming
+      - ORG_CONFIG_PATH=/config/organizations.yml
+    volumes:
+      - ../queue:/data/queue
+      - ../.claude/config/organizations.yml:/config/organizations.yml:ro
+    restart: unless-stopped
+
+  dashboard:
+    build:
+      context: ./dashboard
+    ports:
+      - "3801:3801"
+    environment:
+      - PORT=3801
+      - SESSIONS_DIR=/data/sessions
+    volumes:
+      - ../sessions:/data/sessions:ro
+    restart: unless-stopped
+
+  ctrl:
+    build:
+      context: ./ctrl
+    ports:
+      - "3802:3802"
+    volumes:
+      - ~/.claude/projects:/root/.claude/projects:ro
+    restart: unless-stopped
+
+  cron:
+    image: alpine:3.19
+    volumes:
+      - ../queue:/data/queue
+      - ./cron/sweep.sh:/sweep.sh:ro
+    entrypoint: /bin/sh
+    # Alpine crond does not pass container env vars to jobs.
+    # Inline QUEUE_DIR directly in the crontab entry.
+    command: >
+      -c "chmod +x /sweep.sh &&
+          echo '*/30 * * * * QUEUE_DIR=/data/queue/incoming /sweep.sh' | crontab - &&
+          crond -f -l 2"
+    healthcheck:
+      test: ["CMD", "pgrep", "crond"]
+      interval: 60s
+      timeout: 5s
+      retries: 3
+    restart: unless-stopped

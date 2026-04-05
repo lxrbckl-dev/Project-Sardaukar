@@ -1,0 +1,19 @@
+# Organization Configuration
+# This is the single source of truth for all managed GitHub organizations.
+# All agents read from this file — never hardcode org names elsewhere.
+#
+# To add a new org:
+#   1. Add an entry below
+#   2. Set the webhook secret in docker/.env
+#   3. Configure the webhook in GitHub (see README.md)
+#   4. Restart the TPM container (webhook-listener hot-reloads every 5 minutes)
+
+organizations:
+  - name: herzog-org
+    project_number: 1
+    project_url: https://github.com/orgs/herzog-org/projects/1
+    webhook_secret: ${HERZOG_WEBHOOK_SECRET}
+  - name: lxrbckl-dev
+    project_number: 1
+    project_url: https://github.com/orgs/lxrbckl-dev/projects/1
+    webhook_secret: ${LXRBCKL_WEBHOOK_SECRET}

@@ -1,0 +1,9 @@
+{
+  "name": "sardaukar-webhook-listener",
+  "version": "1.0.0",
+  "description": "GitHub webhook listener for Project Sardaukar",
+  "main": "server.js",
+  "dependencies": {
+    "js-yaml": "^4.1.0"
+  }
+}
