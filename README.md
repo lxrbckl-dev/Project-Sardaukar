@@ -10,10 +10,9 @@ For the full technical specification and design decisions, see [CLAUDE.md](CLAUD
 
 - [Prerequisites](#prerequisites)
 - [Setup](#setup)
-  - [GitHub Webhook Configuration](#1-github-webhook-configuration)
-  - [Organization Config](#2-organization-config)
-  - [Authentication](#3-authentication)
-  - [Start](#4-start)
+  - [Organization Config](#1-organization-config)
+  - [Authentication](#2-authentication)
+  - [Start](#3-start)
 - [Architecture](#architecture)
 - [Agents](#agents)
 
@@ -29,38 +28,23 @@ For the full technical specification and design decisions, see [CLAUDE.md](CLAUD
 
 ## Setup
 
-### 1. GitHub Webhook Configuration
+### 1. Organization Config
 
-Each GitHub organization you want to manage needs a webhook. Repeat for every org in your `organizations.yml`.
-
-1. Go to `https://github.com/organizations/<your-org>/settings/hooks`
-2. Click **Add webhook**
-3. Configure:
-
-| Field | Value |
-|-------|-------|
-| **Payload URL** | `https://webhooks.your-domain.com/hooks/github` |
-| **Content type** | `application/json` |
-| **Secret** | A strong random string — must match your `organizations.yml` |
-| **Which events?** | "Send me everything" or select: Issues, Pull requests, Dependabot alerts, Push, Repository, Issue comments, Projects v2 |
-
-### 2. Organization Config
-
-Edit `.claude/config/organizations.yml` to list your orgs:
+Edit `.claude/config/organizations.yml` to list the GitHub orgs you want to manage:
 
 ```yaml
 organizations:
   - name: your-org-1
     project_number: 1
     project_url: https://github.com/orgs/your-org-1/projects/1
-    webhook_secret: ${ORG1_WEBHOOK_SECRET}
   - name: your-org-2
     project_number: 1
     project_url: https://github.com/orgs/your-org-2/projects/1
-    webhook_secret: ${ORG2_WEBHOOK_SECRET}
 ```
 
-### 3. Authentication
+Each org should have a GitHub Projects kanban board with columns: Backlog, Ready, In progress, In review, Done.
+
+### 2. Authentication
 
 Ensure both CLI tools are authenticated on your host machine:
 
@@ -73,7 +57,7 @@ gh auth login
 gh auth status  # verify scopes: repo, read:org, project
 ```
 
-### 4. Start
+### 3. Start
 
 From the project root:
 
@@ -81,7 +65,7 @@ From the project root:
 claude remote-control --dangerously-skip-permissions --agent .claude/agents/tpm-agent.md
 ```
 
-TPM will execute its Startup Sequence (verify auth, read org config, sync boards) and enter its Main Loop. Connect to it from your phone via the Claude app using the session URL displayed in the terminal.
+TPM will execute its Startup Sequence (verify auth, read org config, sync boards) then wait for your commands or run periodic sweeps. Connect to it from your phone via the Claude app using the session URL displayed in the terminal.
 
 ---
 
@@ -97,13 +81,17 @@ Host Machine
     └── Kanban boards per org (Backlog → Ready → In progress → In review → Done)
 ```
 
+TPM receives work two ways:
+1. **You tell it** — connect from phone or CLI and give it commands
+2. **Periodic sweep** — TPM scans all orgs for new issues, PRs, alerts every 30 minutes
+
 ---
 
 ## Agents
 
 ### TPM (orchestrator)
 
-Your single point of contact. Consumes events, triages issues, manages kanban boards, spawns SWE/QA subagents, and provides status summaries when you connect. Does not write code.
+Your single point of contact. Scans orgs for work, triages issues, manages kanban boards, spawns SWE/QA subagents, and provides status summaries when you connect. Does not write code.
 
 ### SWE subagents (ephemeral, up to N concurrent)
 

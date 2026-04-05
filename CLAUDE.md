@@ -11,7 +11,7 @@ An autonomous DevOps agent platform that manages multiple GitHub organizations. 
 - **Human PRs are sacred** — agents review but never merge human-created PRs. Only agent PRs (identified by branch naming convention) can be auto-merged.
 - **No repo settings changes** — agents can request a human to enable Dependabot or set branch protection, but cannot do it themselves.
 - **No new repos** — agents monitor and maintain existing repos only.
-- **Single source of truth for orgs** — `.claude/config/organizations.yml` is the only place org names, project board URLs, and webhook secrets are defined. Never hardcode org names in agent prompts or application code.
+- **Single source of truth for orgs** — `.claude/config/organizations.yml` is the only place org names and project board URLs are defined. Never hardcode org names in agent prompts or application code.
 - **TPM is the orchestrator** — one long-running session. SWE and QA are ephemeral subagents spawned via Claude's Agent tool. No polling, no idle processes.
 - **Configurable concurrency** — `SWE_AGENT_COUNT` environment variable controls max concurrent SWE subagents (default: 3).
 
@@ -26,8 +26,6 @@ Host Machine
 ├── claude remote-control --agent tpm-agent.md     ← TPM (orchestrator)
 │   ├── spawns SWE subagents (ephemeral)           ← code work
 │   └── spawns QA subagents (ephemeral)            ← PR review
-├── Caddy (reverse proxy)
-│   └── webhooks.<domain> → webhook listener
 └── GitHub (source of truth)
     ├── Issues, PRs, Dependabot alerts
     └── Kanban boards per org
@@ -87,7 +85,7 @@ Does NOT: write feature code, triage issues, delete anything.
 ## Subagent Flow
 
 ```
-TPM receives work (webhook, sweep, or human request)
+TPM receives work (sweep or human command)
   → Triages: what kind of work?
     → Spawns SWE subagent with full context
       → SWE does work, opens PR, returns result
@@ -121,7 +119,7 @@ TPM assesses difficulty at triage time:
 ## Dependabot Workflow (Flagship Feature)
 
 1. Dependabot flags a vulnerability
-2. TPM picks up the alert (via sweep or webhook event file)
+2. TPM picks up the alert (via sweep or human command)
 3. TPM spawns SWE subagent with alert details and model recommendation
 4. SWE creates branch (`fix/swe-1/lodash-4.17.21`), implements fix, runs tests
 5. SWE opens PR, returns result to TPM
@@ -150,7 +148,7 @@ Cards in Done for 7+ days are auto-archived during sweeps. Archived items remain
 
 ### Shared Daily Log
 
-Path: `/data/logs/<org-name>/YYYY-MM-DD.md`
+Path: `logs/<org-name>/YYYY-MM-DD.md` (relative to project root)
 
 - TPM and all subagents write to the same file per org per day
 - Prefixed: `[TPM]`, `[SWE-1]`, `[QA]`, etc.
@@ -182,7 +180,6 @@ organizations:
   - name: org-name
     project_number: 1
     project_url: https://github.com/orgs/org-name/projects/1
-    webhook_secret: ${ORG_WEBHOOK_SECRET}
 ```
 
 - TPM reads from this file at startup and during sweeps — org names are never hardcoded elsewhere
@@ -200,13 +197,16 @@ organizations:
 ├── README.md                              # Setup guide
 ├── CHANGELOG.md                           # All changes documented
 ├── .gitignore
-└── .claude/
-    ├── config/
-    │   └── organizations.yml              # Org definitions (single source of truth)
-    └── agents/
-        ├── tpm-agent.md                   # TPM agent definition (orchestrator)
-        ├── swe-agent.md                   # SWE subagent definition
-        └── qa-agent.md                    # QA subagent definition
+├── .claude/
+│   ├── config/
+│   │   └── organizations.yml              # Org definitions (single source of truth)
+│   └── agents/
+│       ├── tpm-agent.md                   # TPM agent definition (orchestrator)
+│       ├── swe-agent.md                   # SWE subagent definition
+│       └── qa-agent.md                    # QA subagent definition
+└── logs/                                  # Daily agent logs (gitignored, created at runtime)
+    └── <org-name>/
+        └── YYYY-MM-DD.md
 ```
 
 ---

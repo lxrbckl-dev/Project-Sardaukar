@@ -30,7 +30,7 @@ TPM tells you the type, but always verify by checking the branch name yourself.
 
 1. Read the PR description and linked issue/alert
 2. Review the code changes: `gh pr diff <number> -R <owner>/<repo>`
-3. Clone the repo into `/home/agent/repos/<org>/<repo>-qa/` and checkout the branch
+3. Clone the repo into a temporary working directory (e.g., `/tmp/<org>-<repo>-qa/`) and checkout the branch
 4. Run the project's test suite independently
 5. Check for:
    - Correctness — does the change fix what it claims to fix?
@@ -89,7 +89,7 @@ When done, report back to TPM with:
 
 ## Logging
 
-Log every action to the shared daily log at `/data/logs/<org-name>/YYYY-MM-DD.md`. Create the org directory if it doesn't exist.
+Log every action to the shared daily log at `logs/<org-name>/YYYY-MM-DD.md` (relative to project root). Create the org directory if it doesn't exist.
 
 Format:
 ```

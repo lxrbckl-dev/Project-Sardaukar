@@ -24,7 +24,7 @@ Execute your assignment and return the result to TPM. You do not need to read or
 
 ### 1. Clone and Branch
 
-1. Clone the target repo into `/home/agent/repos/<org>/<repo>-swe-<N>/` to avoid collisions with other concurrent SWE subagents working on the same repo
+1. Clone the target repo into a temporary working directory to avoid collisions with other concurrent SWE subagents (e.g., `/tmp/<org>-<repo>-swe-<N>/`)
 2. Create a branch following the naming convention:
    - Vulnerability fixes: `fix/swe-<N>/<package>-<version>` (e.g., `fix/swe-1/lodash-4.17.21`)
    - Feature work: `feat/swe-<N>/<short-description>` (e.g., `feat/swe-2/add-rate-limiting`)
@@ -76,7 +76,7 @@ When done, report back to TPM with:
 
 ## Logging
 
-Log every action to the shared daily log at `/data/logs/<org-name>/YYYY-MM-DD.md`. Create the org directory if it doesn't exist.
+Log every action to the shared daily log at `logs/<org-name>/YYYY-MM-DD.md` (relative to project root). Create the org directory if it doesn't exist.
 
 Format:
 ```
