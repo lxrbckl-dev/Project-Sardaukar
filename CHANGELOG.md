@@ -165,3 +165,46 @@ Major architectural change: TPM is now the sole long-running container that spaw
 54. **Cron container has no health check** — If `crond` dies silently inside the Alpine container, sweep triggers stop and nobody notices until the user checks. Added a `pgrep crond` health check.
 
 55. **Webhook listener crashes on malformed org config** — If `organizations.yml` is empty, has a syntax error that parses to non-object, or is missing the `organizations` array, `parseOrgSecrets` would throw on `for..of undefined`. Added a guard that checks for the array and logs a warning instead of crashing.
+
+### Changed — Authentication: persistent OAuth via mounted volume
+
+Replaced the split read-only auth mounts with a single read-write `~/.claude` volume mount. Claude Code authenticates via OAuth inside the container using its Linux file-based credential store (independent of the macOS Keychain on the host).
+
+**What changed:**
+- `docker-compose.yml` — replaced `~/.claude/auth:/home/agent/.claude/auth:ro` + `~/.claude/projects:rw` split mounts with single `~/.claude:/home/agent/.claude:rw`
+- `entrypoint.sh` — added auth check on startup. If not authenticated, prints instructions and waits (keeps container alive for `docker exec`)
+- `start.sh` — added first-run auth instructions to startup output
+- `CLAUDE.md` — added Authentication section, updated volume mounts and bootstrap docs
+- `README.md` — replaced host auth instructions with container-first auth flow, added "First-Run: Authenticate Claude" section
+
+**First-run flow:** start containers → `docker exec -it <container> claude auth login` → visit URL in browser → authenticate → restart container → done forever.
+
+### Fixed — Deployment testing
+
+56. **Cron container: `chmod` fails on read-only mount** — `sweep.sh` is mounted `:ro` into the container, so `chmod +x /sweep.sh` in the compose command fails on every boot, causing a restart loop. Removed the `chmod` from the compose command — the file already has execute permissions set on the host.
+
+57. **Ctrl container: silent crash on startup** — `ctrl-daemon` exits with code 1 and no log output. Under investigation — likely a runtime compatibility issue with the headless Docker environment. Non-blocking for core platform functionality (monitoring is a nice-to-have). Ctrl container left in compose but may need further debugging.
+
+### Changed — Removed Docker, moved to native host execution
+
+Docker was removed entirely. `claude remote-control` requires full OAuth login which cannot be completed inside a Docker container (interactive terminal input issues). Running natively on the host is simpler and fully supported.
+
+**Removed:**
+- `docker/` directory (all Dockerfiles, compose, entrypoint, .dockerignore, .env)
+- `start.sh`, `refresh-token.sh`
+- `queue/`, `sessions/`, `logs/` directories and `.gitkeep` files
+- All Docker-related documentation
+
+**What remains:**
+- `.claude/agents/` — TPM, SWE, QA agent definitions
+- `.claude/config/organizations.yml` — org configuration
+- `CLAUDE.md` — full spec (rewritten for native execution)
+- `README.md` — setup guide (rewritten)
+- `CHANGELOG.md`
+- `.gitignore`
+
+**How it runs now:**
+```
+claude remote-control --dangerously-skip-permissions --agent .claude/agents/tpm-agent.md
+```
+TPM runs natively on the host, spawns SWE/QA subagents via the Agent tool. No containers, no volume mounts, no auth workarounds.
