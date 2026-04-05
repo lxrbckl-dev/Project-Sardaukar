@@ -1,4 +1,4 @@
-# Project Sardaukar
+![Project Sardaukar](https://immich.lxrbckl.com/api/assets/c9834643-3ad1-41fd-bea2-d27393fe43eb/thumbnail?slug=projectSardaukar&size=preview&c=UfcJDIKHeJd%2Fh4aOdnX4fXL%2FWA%3D%3D&edited=true)
 
 An always-on, self-hosted AI agent platform that acts as a fully autonomous DevOps team for managing multiple GitHub organizations. Runs on Docker and handles issue triage, PR management, vulnerability remediation, and kanban board tracking through a team of specialized Claude Code agents.
 
