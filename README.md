@@ -10,6 +10,7 @@ For the full technical specification and design decisions, see [CLAUDE.md](CLAUD
 
 - [Prerequisites](#prerequisites)
 - [Setup](#setup)
+  - [Clone and Enter](#0-clone-and-enter)
   - [Organization Config](#1-organization-config)
   - [Authentication](#2-authentication)
   - [Start](#3-start)
@@ -32,6 +33,13 @@ For the full technical specification and design decisions, see [CLAUDE.md](CLAUD
 ---
 
 ## Setup
+
+### 0. Clone and Enter
+
+```bash
+git clone https://github.com/lxrbckl-dev/Project-Sardaukar.git
+cd Project-Sardaukar
+```
 
 ### 1. Organization Config
 
