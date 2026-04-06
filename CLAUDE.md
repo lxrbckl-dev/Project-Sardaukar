@@ -23,7 +23,7 @@ TPM runs as a `claude remote-control` session on the host. It spawns SWE and QA 
 
 ```
 Host Machine
-├── claude remote-control --agent tpm-agent.md     ← TPM (orchestrator)
+├── claude remote-control                          ← TPM (orchestrator, agent loaded via settings)
 │   ├── spawns SWE subagents (ephemeral)           ← code work
 │   └── spawns QA subagents (ephemeral)            ← PR review
 └── GitHub (source of truth)
@@ -157,7 +157,7 @@ Path: `logs/<org-name>/YYYY-MM-DD.md` (relative to project root)
 ### Format
 
 ```
-[2026-04-04 14:30:00] [TPM] Sweep started for herzog-org
+[2026-04-04 14:30:00] [TPM] User requested vulnerability check for herzog-org
 [2026-04-04 14:30:02] [TPM] gh repo list herzog-org --limit 1000
 [2026-04-04 14:30:03] [TPM] Found 2 repos: repo-a, repo-b
 [2026-04-04 14:30:05] [TPM] Spawning SWE-1 for dependabot alert in herzog-org/repo-a

@@ -65,7 +65,13 @@ From the project root:
 claude remote-control --permission-mode bypassPermissions
 ```
 
-TPM will execute its Startup Sequence (verify auth, read org config) and wait for your commands. Connect from your phone by opening [claude.ai/code](https://claude.ai/code) — your session will be listed there.
+Then connect from your phone at [claude.ai/code](https://claude.ai/code) and send the first message:
+
+```
+You are TPM. Read your agent definition at .claude/agents/tpm-agent.md and execute your Startup Sequence.
+```
+
+After that, just talk to it naturally — "check for vulnerabilities", "fix issue #5", "what's the status?"
 
 ---
 
@@ -73,7 +79,7 @@ TPM will execute its Startup Sequence (verify auth, read org config) and wait fo
 
 ```
 Host Machine
-├── claude remote-control --agent tpm-agent.md     ← TPM (orchestrator)
+├── claude remote-control                          ← TPM (orchestrator, agent loaded via settings)
 │   ├── spawns SWE subagents (ephemeral)           ← code work
 │   └── spawns QA subagents (ephemeral)            ← PR review
 └── GitHub (source of truth)

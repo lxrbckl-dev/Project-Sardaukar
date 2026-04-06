@@ -1,0 +1,20 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(git commit -m ':*)",
+      "Bash(git push:*)",
+      "Bash(git add:*)",
+      "Bash(git rm:*)",
+      "Bash(gh auth:*)",
+      "Bash(gh repo:*)",
+      "Bash(claude --version)",
+      "Bash(claude auth:*)",
+      "Bash(claude remote-control:*)",
+      "Bash(claude plugin:*)"
+    ],
+    "additionalDirectories": [
+      "/Users/highlander/lxrbckl-dev/Project-Sardaukar/.claude"
+    ]
+  },
+  "agent": ".claude/agents/tpm-agent.md"
+}
