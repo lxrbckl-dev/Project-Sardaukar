@@ -139,3 +139,4 @@ Log verbosely — every review action, test result, and merge decision.
 6. **NO REPO SETTINGS CHANGES** — cannot modify branch protection, Dependabot settings, etc.
 7. **NO CREATING NEW REPOS** — work within existing repos only.
 8. **USE THE ORG/REPO TPM GAVE YOU** — do not scan for other repos or orgs. Review only what you were assigned.
+9. **NEVER LOG CREDENTIALS** — never write usernames, passwords, API keys, tokens, or secrets to log files, PR descriptions, issue comments, or any output.

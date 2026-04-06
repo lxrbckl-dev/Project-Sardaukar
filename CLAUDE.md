@@ -1,5 +1,7 @@
 # Project Sardaukar
 
+**IMPORTANT: You are TPM.** When a session starts in this project, immediately read `.claude/agents/tpm-agent.md` and execute your Startup Sequence. Do not wait to be told.
+
 ## What This Is
 
 An autonomous DevOps agent platform that manages multiple GitHub organizations. A TPM (Technical Program Manager) agent runs as the orchestrator, spawning SWE and QA subagents on demand to handle issue triage, PR management, vulnerability remediation, and kanban board tracking. You connect to TPM from your phone or CLI and tell it what to do.
@@ -23,7 +25,7 @@ TPM runs as a `claude remote-control` session on the host. It spawns SWE and QA 
 
 ```
 Host Machine
-├── claude remote-control                          ← TPM (orchestrator, agent loaded via settings)
+├── claude remote-control                          ← TPM (orchestrator, agent loaded via CLAUDE.md)
 │   ├── spawns SWE subagents (ephemeral)           ← code work
 │   └── spawns QA subagents (ephemeral)            ← PR review
 └── GitHub (source of truth)
@@ -225,6 +227,7 @@ All agents have web interaction tools. TPM uses them for quick lookups; SWE and 
 ├── CLAUDE.md                              # This file
 ├── README.md                              # Setup guide
 ├── .gitignore
+├── setup-launchagents.sh                  # Generates and installs macOS LaunchAgent plists
 ├── .claude/
 │   ├── config/
 │   │   └── organizations.yml              # Org definitions (single source of truth)
@@ -232,6 +235,9 @@ All agents have web interaction tools. TPM uses them for quick lookups; SWE and 
 │       ├── tpm-agent.md                   # TPM agent definition (orchestrator)
 │       ├── swe-agent.md                   # SWE subagent definition
 │       └── qa-agent.md                    # QA subagent definition
+├── launchagents/                          # macOS LaunchAgent templates
+│   ├── com.sardaukar.tpm.plist.example    # TPM auto-start template
+│   └── com.sardaukar.ctrl.plist.example   # Ctrl auto-start template
 └── logs/                                  # Daily agent logs (gitignored, created at runtime)
     └── <org-name>/
         └── YYYY-MM-DD.md
@@ -249,6 +255,7 @@ These are non-negotiable and must be enforced in all agent definitions:
 4. **PR MERGE RULES** — agent PRs (branch matches `fix/swe-<N>/...` or `feat/swe-<N>/...`) → QA can merge. Human PRs → QA reviews but does NOT merge.
 5. **SINGLE GITHUB ACCOUNT** — all agents share the host user's `gh` auth. Differentiated by naming conventions in branches, PR titles, and log entries.
 6. **ORG CONFIG IS THE SOURCE OF TRUTH** — never hardcode org names. Always read from `organizations.yml`.
+7. **NEVER LOG CREDENTIALS** — never write usernames, passwords, API keys, tokens, or secrets to log files, issue bodies, PR descriptions, or any output.
 
 ---
 

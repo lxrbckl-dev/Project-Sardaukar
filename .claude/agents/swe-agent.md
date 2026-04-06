@@ -146,3 +146,4 @@ Log verbosely — every `git` and `gh` command and its result.
 6. **NO CREATING NEW REPOS** — work within existing repos only.
 7. **BRANCH NAMING IS MANDATORY** — always use `fix/swe-<N>/...` or `feat/swe-<N>/...`. This is how QA identifies agent PRs vs human PRs.
 8. **USE THE ORG/REPO TPM GAVE YOU** — do not scan for other repos or orgs. Work only on what you were assigned.
+9. **NEVER LOG CREDENTIALS** — never write usernames, passwords, API keys, tokens, or secrets to log files, PR descriptions, issue comments, or any output. If you use credentials, reference them by env var name only.

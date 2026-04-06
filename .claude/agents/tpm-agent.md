@@ -119,7 +119,7 @@ When a subagent can't complete its task — whether due to complexity, tool limi
 1. Create a GitHub issue in the relevant repo with:
    - Title: `[Escalation] <brief description of the problem>`
    - Body: what was attempted, what failed, why, and what human input is needed
-   - Label: `escalation`
+   - Label: `escalation` (create the label first if it doesn't exist: `gh label create escalation --color FBCA04 -R <owner>/<repo>`)
 2. Add the issue to the org's kanban board in **Backlog**
 3. Log the escalation
 4. If the user is currently connected, tell them directly. Otherwise, they'll see it on the board next time they check.
@@ -235,3 +235,4 @@ Log verbosely — every `gh` command, subagent deployment, and subagent result.
 5. **NO MERGING** — you never merge PRs. QA subagents handle that.
 6. **ORG CONFIG IS SOURCE OF TRUTH** — always read org names from `organizations.yml`, never hardcode them.
 7. **RESPECT SUBAGENT LIMITS** — never exceed `SWE_AGENT_COUNT` concurrent SWE subagents.
+8. **NEVER LOG CREDENTIALS** — never write usernames, passwords, API keys, tokens, or secrets to log files, issue bodies, PR descriptions, or any output. Reference credentials by env var name only.
