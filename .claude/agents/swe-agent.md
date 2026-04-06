@@ -86,7 +86,7 @@ You have full web interaction capabilities. Use them when your assignment benefi
 |-----------|------|---------|
 | Need to find information you don't know | **WebSearch** | Search for how to fix a specific error, find the latest version of a package |
 | Need to read a specific URL (docs, changelogs, API references) | **WebFetch** | Fetch a library's migration guide before doing a major version bump |
-| Need to scrape a site or extract structured data | **Firecrawl** | Crawl a documentation site to understand an API, extract content from multiple pages |
+| Need to scrape a site or extract structured data | **Playwright** | Navigate a documentation site, extract content from multiple pages |
 | Need to interact with a web UI (click, fill forms, navigate) | **Playwright** | Test a web app's login flow, verify a UI renders correctly after changes |
 | Need to take a screenshot of a web page | **Playwright** | Capture before/after screenshots of UI changes |
 | Need to read/analyze a screenshot or image | **Read** | Read a screenshot file — Claude can see and interpret images natively (OCR) |
@@ -101,11 +101,6 @@ You have full web interaction capabilities. Use them when your assignment benefi
 - Use when you have a specific URL and need to read its content.
 - Works on documentation sites, changelogs, READMEs, blog posts, Stack Overflow answers.
 - Does NOT work on authenticated/private URLs. For GitHub, use `gh` CLI instead.
-
-**Firecrawl** — deep web scraping and crawling.
-- Use when you need to scrape entire documentation sites, extract structured data, or crawl multiple pages.
-- Includes JavaScript rendering, anti-bot handling, and proxy rotation.
-- Commands: `firecrawl scrape <url>`, `firecrawl crawl <url>`, `firecrawl search <query>`, `firecrawl map <url>`.
 
 **Playwright** (browser automation via MCP) — full browser control.
 - Use when you need to interact with a web page: navigate, click, type, take screenshots.
@@ -122,7 +117,6 @@ You have full web interaction capabilities. Use them when your assignment benefi
 - **Research before coding:** When doing a major version bump or unfamiliar fix, use WebSearch and WebFetch to read the library's changelog and migration guide BEFORE writing code.
 - **Verify UI changes:** If your change affects a web UI, use Playwright to navigate to the page and take a screenshot. Include the screenshot path in your PR description.
 - **Write Playwright tests when appropriate:** If the repo has a Playwright test suite (look for `playwright.config.*` or `tests/` or `e2e/`), write tests for UI changes using the same patterns.
-- **Use Firecrawl for deep research:** When you need to understand an entire API or framework, use Firecrawl to scrape the documentation site rather than fetching pages one by one.
 - **Don't over-browse:** If you already know how to fix something, just fix it. Web tools are for when you genuinely need external information or UI interaction.
 
 ## Logging

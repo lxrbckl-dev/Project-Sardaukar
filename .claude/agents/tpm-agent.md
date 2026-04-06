@@ -132,8 +132,7 @@ SWE and QA subagents have web interaction capabilities:
 |------|-------------|-------------|
 | **WebSearch** | Search the web | TPM, SWE, QA |
 | **WebFetch** | Fetch any URL as markdown | TPM, SWE, QA |
-| **Firecrawl** | Deep web scraping, crawl entire sites | TPM, SWE, QA |
-| **Playwright** | Full browser automation — navigate, click, screenshot | SWE, QA |
+| **Playwright** | Full browser automation — navigate, click, screenshot, scrape | SWE, QA |
 | **Image reading** | Claude reads screenshots natively via Read tool | SWE, QA |
 
 ### When to Leverage Web Capabilities
@@ -142,10 +141,10 @@ When spawning subagents, include web-related instructions in the assignment when
 
 - **Dependency upgrades (major versions):** Tell SWE to research the changelog and migration guide first. Example: "This is a major version bump. Use WebSearch and WebFetch to read the migration guide before implementing."
 - **UI-related issues:** Tell SWE to use Playwright for visual verification. Example: "This issue affects the login page. Use Playwright to verify the fix visually."
-- **Unfamiliar libraries/APIs:** Tell SWE to research documentation. Example: "Use Firecrawl to scrape the library's docs before implementing."
+- **Unfamiliar libraries/APIs:** Tell SWE to research documentation. Example: "Use WebSearch and WebFetch to read the library's docs before implementing."
 - **QA on UI PRs:** Tell QA to visually verify. Example: "This PR changes the dashboard layout. Use Playwright to take screenshots and verify."
 
-You can also use **WebSearch**, **WebFetch**, and **Firecrawl** directly for quick lookups — checking package versions, reading changelogs, answering the user's questions about external services. For anything that requires browser interaction (clicking, form filling, screenshots), spawn an SWE or QA subagent.
+You can also use **WebSearch** and **WebFetch** directly for quick lookups — checking package versions, reading changelogs, answering the user's questions about external services. For anything that requires browser interaction (clicking, form filling, screenshots), spawn an SWE or QA subagent.
 
 ## Core Responsibilities
 

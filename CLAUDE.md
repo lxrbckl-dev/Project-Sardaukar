@@ -65,7 +65,7 @@ Full-stack developers. TPM assigns an instance number (SWE-1, SWE-2, etc.) when 
 - Create PRs with descriptive titles and bodies
 - For complex fixes (major version bumps with breaking changes): flag for human escalation
 - Return results to TPM: PR number, success/failure/escalation
-- Can browse the web (WebSearch, WebFetch), scrape sites (Firecrawl), automate browsers (Playwright), and read screenshots — use for researching docs, verifying UI changes, and writing Playwright tests
+- Can browse the web (WebSearch, WebFetch), automate browsers (Playwright), and read screenshots — use for researching docs, verifying UI changes, and writing Playwright tests
 - Log with `[SWE-<N>]` prefix
 
 Does NOT: approve own PRs, move board cards, triage issues, delete anything.
@@ -210,13 +210,12 @@ All agents have web interaction tools. TPM uses them for quick lookups; SWE and 
 |------|------|-------------|-------------|
 | **WebSearch** | Built-in | Search the web | TPM, SWE, QA |
 | **WebFetch** | Built-in | Fetch a URL, get markdown | TPM, SWE, QA |
-| **Firecrawl** | Plugin | Deep web scraping, crawl entire sites, extract structured data | TPM, SWE, QA |
-| **Playwright** | Plugin (MCP) | Full browser automation — navigate, click, type, screenshot | SWE, QA |
+| **Playwright** | Plugin (MCP) | Full browser automation — navigate, click, type, screenshot, scrape | SWE, QA |
 | **Image reading** | Built-in | Claude reads images/screenshots natively via Read tool | SWE, QA |
 
-- **SWE:** Research docs/changelogs before major upgrades. Verify UI changes visually. Write Playwright tests. Scrape documentation with Firecrawl.
+- **SWE:** Research docs/changelogs before major upgrades. Verify UI changes visually. Write Playwright tests. Scrape sites with Playwright.
 - **QA:** Visually verify UI-related PRs using Playwright screenshots. Research context for reviews.
-- **TPM:** Uses WebSearch, WebFetch, and Firecrawl for quick lookups (package versions, changelogs, answering questions). Delegates browser interaction to subagents.
+- **TPM:** Uses WebSearch and WebFetch for quick lookups (package versions, changelogs, answering questions). Delegates browser interaction to subagents.
 
 ---
 
@@ -236,8 +235,7 @@ All agents have web interaction tools. TPM uses them for quick lookups; SWE and 
 │       ├── swe-agent.md                   # SWE subagent definition
 │       └── qa-agent.md                    # QA subagent definition
 ├── launchagents/                          # macOS LaunchAgent templates
-│   ├── com.sardaukar.tpm.plist.example    # TPM auto-start template
-│   └── com.sardaukar.ctrl.plist.example   # Ctrl auto-start template
+│   └── com.sardaukar.tpm.plist.example    # TPM auto-start template
 └── logs/                                  # Daily agent logs (gitignored, created at runtime)
     └── <org-name>/
         └── YYYY-MM-DD.md
@@ -272,4 +270,4 @@ These are non-negotiable and must be enforced in all agent definitions:
 | Logging | Shared daily log per org, verbose, role-prefixed | Full audit trail |
 | Kanban columns | Backlog → Ready → In progress → In review → Done | Matches actual GitHub Projects board |
 | Board cleanup | Auto-archive Done items after 7 days | Keeps board clean, archived items still searchable |
-| Web tools | WebSearch + WebFetch + Playwright + Firecrawl + native image reading | Full web capability suite for all agents |
+| Web tools | WebSearch + WebFetch + Playwright + native image reading | Full web capability suite for all agents |

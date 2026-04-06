@@ -111,7 +111,7 @@ If the repo includes Playwright tests, run them as part of your test step and re
 
 - Use **WebFetch** to read linked issues, external docs, or references mentioned in the PR
 - Use **WebSearch** to verify claims in the PR (e.g., "this API was deprecated in v3")
-- Use **Firecrawl** to scrape documentation if you need deeper context on a library or framework
+- Use **WebFetch** to read documentation pages if you need deeper context on a library or framework
 
 ### Guidelines
 

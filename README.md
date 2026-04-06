@@ -14,8 +14,7 @@ For the full technical specification and design decisions, see [CLAUDE.md](CLAUD
   - [Organization Config](#1-organization-config)
   - [Authentication](#2-authentication)
   - [Start](#3-start)
-- [Monitoring (Ctrl)](#4-monitoring-ctrl-optional)
-  - [Auto-Start on Boot](#5-auto-start-on-boot-macos-launchagent)
+- [Auto-Start on Boot](#4-auto-start-on-boot-macos-launchagent)
 - [Architecture](#architecture)
 - [Agents](#agents)
 
@@ -27,8 +26,6 @@ For the full technical specification and design decisions, see [CLAUDE.md](CLAUD
 - [GitHub CLI](https://cli.github.com/) installed and authenticated (`gh auth login`)
 - A Claude Max, Pro, or Team subscription (for `remote-control`)
 - Playwright plugin: `claude plugin install playwright@claude-plugins-official`
-- Firecrawl plugin: `claude plugin install firecrawl@claude-plugins-official`
-- Firecrawl CLI: `npm install -g firecrawl-cli` then `firecrawl login --browser`
 
 ---
 
@@ -88,52 +85,22 @@ Read .claude/agents/tpm-agent.md and execute your Startup Sequence.
 
 After that, just talk naturally — "check for vulnerabilities", "fix issue #5", "what's the status?"
 
-### 4. Monitoring (Ctrl) — optional
+### 4. Auto-Start on Boot (macOS LaunchAgent)
 
-[Bulletproof Ctrl](https://ctrl.bulletproof.sh) visualizes all agent activity as animated pixel art characters in a virtual office. Run it in a separate terminal:
-
-```bash
-npx @bulletproof-sh/ctrl-daemon@latest --port 3871 --share
-```
-
-- Auto-detects Claude Code sessions by watching `~/.claude/projects/`
-- `--share` generates an encrypted relay link you can view from your phone
-- Read-only — cannot send commands to agents
-
-To expose Ctrl via a subdomain, add to your Caddyfile:
-
-```
-ctrl.your-domain.com {
-    basic_auth {
-        <username> <hashed-password>
-    }
-    reverse_proxy localhost:3871
-}
-```
-
-Then run Ctrl bound to all interfaces:
-
-```bash
-npx @bulletproof-sh/ctrl-daemon@latest --port 3871 --host 0.0.0.0 --no-open
-```
-
-### 5. Auto-Start on Boot (macOS LaunchAgent)
-
-To have TPM and Ctrl start automatically on login, run the setup script from the project root:
+To have TPM start automatically on login, run the setup script from the project root:
 
 ```bash
 ./setup-launchagents.sh
 ```
 
-This detects your local paths, generates the plist files, installs them, and starts both services immediately. They will restart on crash and start on every login.
+This detects your local paths, generates the plist file, installs it, and starts TPM immediately. It will restart on crash and start on every login.
 
 To stop:
 ```bash
 launchctl unload ~/Library/LaunchAgents/com.sardaukar.tpm.plist
-launchctl unload ~/Library/LaunchAgents/com.sardaukar.ctrl.plist
 ```
 
-Logs are at `logs/tpm-launch.log` and `logs/ctrl-launch.log`.
+Logs are at `logs/tpm-launch.log`.
 
 ---
 
