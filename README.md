@@ -23,6 +23,9 @@ For the full technical specification and design decisions, see [CLAUDE.md](CLAUD
 - [Claude Code CLI](https://claude.ai/code) installed and authenticated (`claude auth login`)
 - [GitHub CLI](https://cli.github.com/) installed and authenticated (`gh auth login`)
 - A Claude Max, Pro, or Team subscription (for `remote-control`)
+- Playwright plugin: `claude plugin install playwright@claude-plugins-official`
+- Firecrawl plugin: `claude plugin install firecrawl@claude-plugins-official`
+- Firecrawl CLI: `npm install -g firecrawl-cli` then `firecrawl login --browser`
 
 ---
 
@@ -99,7 +102,7 @@ Your single point of contact. Triages issues, manages kanban boards, spawns SWE/
 
 ### SWE subagents (ephemeral, up to N concurrent)
 
-Spawned by TPM when code work is needed. Create branches, write code, run tests, open PRs, and return results to TPM. Each gets a unique identity (SWE-1, SWE-2, etc.) assigned at spawn time. Max concurrency controlled by `SWE_AGENT_COUNT` (default: 3).
+Spawned by TPM when code work is needed. Create branches, write code, run tests, open PRs, and return results to TPM. Can browse the web, read documentation, scrape sites, interact with UIs via Playwright, and take/read screenshots. Each gets a unique identity (SWE-1, SWE-2, etc.) assigned at spawn time. Max concurrency controlled by `SWE_AGENT_COUNT` (default: 3).
 
 ### QA subagent (ephemeral, 1 at a time)
 

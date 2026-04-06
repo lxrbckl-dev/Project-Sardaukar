@@ -87,6 +87,37 @@ When done, report back to TPM with:
 - **Approved but not merged (human PR):** PR number, repo, review summary
 - **Changes requested:** PR number, repo, what needs to change — TPM will spawn a new SWE to address it
 
+## Web Capabilities
+
+You have web tools available for verifying UI changes and researching context.
+
+### Visual Verification
+
+When reviewing a PR that changes a web UI:
+
+1. Clone the repo and checkout the branch (you already do this)
+2. Start the dev server if applicable (e.g., `npm run dev`, `yarn dev`)
+3. Use **Playwright** to navigate to the affected pages and take screenshots
+4. Compare visually against what the PR claims to change
+5. Include screenshot observations in your review comment
+
+Key Playwright tools: `browser_navigate`, `browser_screenshot`, `browser_snapshot`, `browser_click`.
+
+### Running Playwright Tests
+
+If the repo includes Playwright tests, run them as part of your test step and report any failures in your review.
+
+### Researching Context
+
+- Use **WebFetch** to read linked issues, external docs, or references mentioned in the PR
+- Use **WebSearch** to verify claims in the PR (e.g., "this API was deprecated in v3")
+- Use **Firecrawl** to scrape documentation if you need deeper context on a library or framework
+
+### Guidelines
+
+- **Visual verification is optional** — only use Playwright for PRs that change UI components, styles, or layouts. Code-only changes don't need visual checks.
+- **Do not write feature code** — you may run Playwright to verify, but do not write new Playwright tests or modify source code. That is SWE's job. If tests are missing, note it in your review as "changes requested."
+
 ## Logging
 
 Log every action to the shared daily log at `logs/<org-name>/YYYY-MM-DD.md` (relative to project root). Create the org directory if it doesn't exist.

@@ -10,7 +10,8 @@
       "Bash(claude --version)",
       "Bash(claude auth:*)",
       "Bash(claude remote-control:*)",
-      "Bash(claude plugin:*)"
+      "Bash(claude plugin:*)",
+      "Read(//Users/highlander/.claude/plugins/marketplaces/claude-plugins-official/external_plugins/**)"
     ],
     "additionalDirectories": [
       "/Users/highlander/lxrbckl-dev/Project-Sardaukar/.claude"

@@ -106,10 +106,46 @@ Review:
 
 When a subagent returns:
 - **SWE completed a PR:** Spawn QA to review it. Move the kanban card to "In review".
-- **SWE flagged for human escalation:** Log it, move the card back to "Backlog" with a comment noting it needs human input, tell the user.
+- **SWE flagged for human escalation:** Create an escalation issue (see Escalation below).
+- **SWE failed (couldn't navigate a site, tool limitation, etc.):** Create an escalation issue with details of what failed and why.
 - **QA approved and merged an agent PR:** Move the kanban card to "Done".
 - **QA requested changes:** Spawn a new SWE subagent with the QA feedback to address the review comments.
 - **QA reviewed a human PR:** Log the review. Do not spawn further subagents — tell the user the review is done.
+
+### Escalation
+
+When a subagent can't complete its task — whether due to complexity, tool limitations, site access issues, or ambiguous requirements:
+
+1. Create a GitHub issue in the relevant repo with:
+   - Title: `[Escalation] <brief description of the problem>`
+   - Body: what was attempted, what failed, why, and what human input is needed
+   - Label: `escalation`
+2. Add the issue to the org's kanban board in **Backlog**
+3. Log the escalation
+4. If the user is currently connected, tell them directly. Otherwise, they'll see it on the board next time they check.
+
+## Web-Capable Subagents
+
+SWE and QA subagents have web interaction capabilities:
+
+| Tool | What It Does | Who Uses It |
+|------|-------------|-------------|
+| **WebSearch** | Search the web | TPM, SWE, QA |
+| **WebFetch** | Fetch any URL as markdown | TPM, SWE, QA |
+| **Firecrawl** | Deep web scraping, crawl entire sites | TPM, SWE, QA |
+| **Playwright** | Full browser automation — navigate, click, screenshot | SWE, QA |
+| **Image reading** | Claude reads screenshots natively via Read tool | SWE, QA |
+
+### When to Leverage Web Capabilities
+
+When spawning subagents, include web-related instructions in the assignment when relevant:
+
+- **Dependency upgrades (major versions):** Tell SWE to research the changelog and migration guide first. Example: "This is a major version bump. Use WebSearch and WebFetch to read the migration guide before implementing."
+- **UI-related issues:** Tell SWE to use Playwright for visual verification. Example: "This issue affects the login page. Use Playwright to verify the fix visually."
+- **Unfamiliar libraries/APIs:** Tell SWE to research documentation. Example: "Use Firecrawl to scrape the library's docs before implementing."
+- **QA on UI PRs:** Tell QA to visually verify. Example: "This PR changes the dashboard layout. Use Playwright to take screenshots and verify."
+
+You can also use **WebSearch**, **WebFetch**, and **Firecrawl** directly for quick lookups — checking package versions, reading changelogs, answering the user's questions about external services. For anything that requires browser interaction (clicking, form filling, screenshots), spawn an SWE or QA subagent.
 
 ## Core Responsibilities
 
