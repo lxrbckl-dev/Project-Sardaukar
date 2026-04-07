@@ -13,8 +13,9 @@ For the full technical specification and design decisions, see [CLAUDE.md](CLAUD
   - [Clone and Enter](#0-clone-and-enter)
   - [Organization Config](#1-organization-config)
   - [Authentication](#2-authentication)
+  - [One-Time Interactive Acceptance](#2a-one-time-interactive-acceptance)
   - [Start](#3-start)
-- [Auto-Start on Boot](#4-auto-start-on-boot-macos-launchagent)
+  - [Connect](#4-connect)
 - [Architecture](#architecture)
 - [Agents](#agents)
 
@@ -64,10 +65,30 @@ claude auth login
 
 # GitHub CLI — agents need this to interact with repos, issues, PRs, and boards
 gh auth login
-gh auth status  # verify scopes: repo, read:org, project
+gh auth refresh -s project  # adds the 'project' scope needed for kanban boards
 ```
 
+### 2a. One-Time Interactive Acceptance
+
+Claude has two interactive prompts that must be accepted once before TPM can run headlessly via LaunchAgent. Run these from the project root:
+
+```bash
+# 1. Accept the workspace trust dialog (saved to ~/.claude.json)
+claude
+# Press 'y' or Enter to trust this workspace, then /exit
+
+# 2. Accept the Remote Control opt-in (saved to ~/.claude/)
+claude remote-control --permission-mode bypassPermissions
+# Type 'y' when prompted, then Ctrl+C to stop
+```
+
+These only need to be done once per machine. After that, TPM can boot cleanly via LaunchAgent without any prompts.
+
 ### 3. Start
+
+There are two ways to start TPM:
+
+**Option A: Manual (run it yourself)**
 
 From the project root:
 
@@ -75,7 +96,21 @@ From the project root:
 claude remote-control --permission-mode bypassPermissions
 ```
 
-Then connect from your phone at [claude.ai/code](https://claude.ai/code). CLAUDE.md instructs TPM to boot automatically. Just say "go" or any message to trigger the Startup Sequence.
+**Option B: Auto-start on boot (macOS LaunchAgent)**
+
+Run the setup script once — TPM starts immediately and will auto-start on every login:
+
+```bash
+./setup-launchagents.sh
+```
+
+To stop: `launchctl unload ~/Library/LaunchAgents/com.sardaukar.tpm.plist`
+
+Logs are at `logs/tpm-launch.log`.
+
+### 4. Connect
+
+Once TPM is running (via either method), connect from your phone at [claude.ai/code](https://claude.ai/code). CLAUDE.md instructs TPM to boot automatically. Just say "go" or any message to trigger the Startup Sequence.
 
 If TPM doesn't boot automatically, send:
 
@@ -84,23 +119,6 @@ Read .claude/agents/tpm-agent.md and execute your Startup Sequence.
 ```
 
 After that, just talk naturally — "check for vulnerabilities", "fix issue #5", "what's the status?"
-
-### 4. Auto-Start on Boot (macOS LaunchAgent)
-
-To have TPM start automatically on login, run the setup script from the project root:
-
-```bash
-./setup-launchagents.sh
-```
-
-This detects your local paths, generates the plist file, installs it, and starts TPM immediately. It will restart on crash and start on every login.
-
-To stop:
-```bash
-launchctl unload ~/Library/LaunchAgents/com.sardaukar.tpm.plist
-```
-
-Logs are at `logs/tpm-launch.log`.
 
 ---
 
