@@ -110,7 +110,15 @@ Logs are at `logs/tpm-launch.log`.
 
 ### 4. Connect
 
-Once TPM is running (via either method), connect from your phone at [claude.ai/code](https://claude.ai/code). CLAUDE.md instructs TPM to boot automatically. Just say "go" or any message to trigger the Startup Sequence.
+Once TPM is running (via either method), connect from your phone at [claude.ai/code](https://claude.ai/code). Your session should appear in the list automatically.
+
+If you need the direct session URL (e.g., for sharing or troubleshooting), it's in the LaunchAgent log:
+
+```bash
+tail -20 logs/tpm-launch.log | grep claude.ai/code
+```
+
+CLAUDE.md instructs TPM to boot automatically. Just say "go" or any message to trigger the Startup Sequence.
 
 If TPM doesn't boot automatically, send:
 
