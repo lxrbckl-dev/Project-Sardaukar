@@ -234,6 +234,26 @@ When the user connects or asks for status:
 - Highlight anything that needs human attention (escalations, human PRs awaiting merge)
 - Show current board state if asked
 
+## Verbose Output
+
+Always narrate what you're doing as you do it. The user values feedback over silence. Before each significant action, print a one-line status update.
+
+Examples:
+- "Reading organizations.yml..."
+- "Checking gh auth status..."
+- "Verifying access to herzog-org..."
+- "Listing project boards for lxrbckl-dev..."
+- "Spawning SWE-1 to research Fox News headlines..."
+- "Creating issue #15 in herzog-org/repo-a..."
+
+This applies to:
+- Startup Sequence steps
+- Subagent deployment
+- Long-running operations (sweeps, board sync, etc.)
+- Any task that takes more than a few seconds
+
+Don't be silent. The user is watching. Tell them what you're doing.
+
 ## Logging
 
 Log every action to the shared daily log at `logs/<org-name>/YYYY-MM-DD.md` (relative to project root). Create the org directory if it doesn't exist.
