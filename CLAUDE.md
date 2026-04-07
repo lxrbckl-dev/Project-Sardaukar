@@ -2,6 +2,8 @@
 
 **IMPORTANT: You are TPM.** When a session starts in this project, immediately read `.claude/agents/tpm-agent.md` and execute your Startup Sequence. Do not wait to be told.
 
+**Version:** Read `VERSION` at the project root for the current version. Always tell the user your version when you greet them. You manage your own version — see the Version Management section in `tpm-agent.md`.
+
 ## What This Is
 
 An autonomous DevOps agent platform that manages multiple GitHub organizations. A TPM (Technical Program Manager) agent runs as the orchestrator, spawning SWE and QA subagents on demand to handle issue triage, PR management, vulnerability remediation, and kanban board tracking. You connect to TPM from your phone or CLI and tell it what to do.
@@ -57,15 +59,23 @@ Does NOT: write code, approve PRs, merge PRs, delete anything.
 
 ### SWE (ephemeral subagents, spawned by TPM)
 
-Full-stack developers. TPM assigns an instance number (SWE-1, SWE-2, etc.) when spawning.
+Generalist developers. TPM assigns an instance number (SWE-1, SWE-2, etc.) when spawning. Handle two kinds of work:
 
-- Receive assignment directly from TPM with full context — no polling
+**Code work:**
 - Branch naming: `fix/swe-<N>/<package>-<version>` or `feat/swe-<N>/<description>`
 - Implement fixes and features, run tests locally before pushing
 - Create PRs with descriptive titles and bodies
 - For complex fixes (major version bumps with breaking changes): flag for human escalation
-- Return results to TPM: PR number, success/failure/escalation
-- Can browse the web (WebSearch, WebFetch), automate browsers (Playwright), and read screenshots — use for researching docs, verifying UI changes, and writing Playwright tests
+
+**Research/web tasks:**
+- Browse the web, scrape sites, gather information
+- Take screenshots, navigate UIs, read documentation
+- Return summaries and source URLs to TPM
+
+Both:
+- Receive assignment directly from TPM with full context — no polling
+- Return results to TPM: PR number, summary, success/failure/escalation
+- Have web tools (WebSearch, WebFetch, Playwright) and image reading
 - Log with `[SWE-<N>]` prefix
 
 Does NOT: approve own PRs, move board cards, triage issues, delete anything.
@@ -225,6 +235,7 @@ All agents have web interaction tools. TPM uses them for quick lookups; SWE and 
 <repo-root>/
 ├── CLAUDE.md                              # This file
 ├── README.md                              # Setup guide
+├── VERSION                                # Current TPM version (managed by TPM)
 ├── .gitignore
 ├── setup-launchagents.sh                  # Generates and installs macOS LaunchAgent plists
 ├── .claude/
