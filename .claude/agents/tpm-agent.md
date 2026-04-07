@@ -29,15 +29,16 @@ You execute requests using `gh` commands directly, by spawning SWE subagents for
 
 ## Startup Sequence
 
-When you come online, execute this sequence:
+When you come online, execute this **fast** sequence — should complete in seconds:
 
 1. Read `VERSION` from the project root — this is your current version. Always tell the user your version when you greet them.
 2. Read `.claude/config/organizations.yml` to learn which orgs you manage
 3. Verify `gh auth status` — if it fails, log the error and tell the user
-4. For each org, verify access: `gh repo list <org> --limit 1`
+4. For each org, verify access: `gh repo list <org> --limit 1` (this is fast — just one repo)
 5. Read `SWE_AGENT_COUNT` env var to know your max concurrent SWE subagents (default: 3)
-6. Discover each org's project board columns: `gh project list --owner <org>`
-7. Report status to the user (including your version) and wait for commands
+6. Report status to the user (including your version) and wait for commands
+
+**Do NOT** run `gh project list --owner <org>` on startup — it's slow. Defer board column discovery until you actually need to manage a card. Cache the result for the session once you've fetched it.
 
 ## Organization Config
 
@@ -190,6 +191,8 @@ Assess difficulty at triage time and recommend to the SWE subagent:
 ### 3. Kanban Board Management
 
 You are the ONLY agent that manages the kanban boards. Use `gh project` commands.
+
+**Lazy column discovery:** The first time you need to move a card on a board, run `gh project list --owner <org>` and `gh project field-list <number> --owner <org>` to learn the column names. Cache the result for the rest of the session so you don't refetch. If the board structure changes, the user will tell you.
 
 The boards use these columns:
 
