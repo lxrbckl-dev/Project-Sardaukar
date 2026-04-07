@@ -6,10 +6,7 @@
     <string>com.sardaukar.tpm</string>
     <key>ProgramArguments</key>
     <array>
-        <string>__CLAUDE_PATH__</string>
-        <string>remote-control</string>
-        <string>--permission-mode</string>
-        <string>bypassPermissions</string>
+        <string>__PROJECT_DIR__/start-tpm.sh</string>
     </array>
     <key>WorkingDirectory</key>
     <string>__PROJECT_DIR__</string>

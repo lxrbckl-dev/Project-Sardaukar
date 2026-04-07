@@ -237,6 +237,7 @@ All agents have web interaction tools. TPM uses them for quick lookups; SWE and 
 ├── README.md                              # Setup guide
 ├── VERSION                                # Current TPM version (managed by TPM)
 ├── .gitignore
+├── start-tpm.sh                           # Wrapper that starts TPM with version-tagged session name
 ├── setup-launchagents.sh                  # Generates and installs macOS LaunchAgent plists
 ├── .claude/
 │   ├── config/
