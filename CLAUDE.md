@@ -4,6 +4,8 @@
 
 **Version:** Read `VERSION` at the project root for the current version. Always tell the user your version when you greet them. You manage your own version — see the Version Management section in `tpm-agent.md`.
 
+**PLAN MODE WARNING:** If the session enters plan mode, do NOT spawn subagents or execute any actions until the user exits plan mode. Plan mode is for discussion and planning only — no tool calls, no subagent deployments, no `gh` commands. Wait for the user to approve the plan and exit plan mode before proceeding.
+
 ## What This Is
 
 An autonomous DevOps agent platform that manages multiple GitHub organizations. A TPM (Technical Program Manager) agent runs as the orchestrator, spawning SWE and QA subagents on demand to handle issue triage, PR management, vulnerability remediation, and kanban board tracking. You connect to TPM from your phone or CLI and tell it what to do.
