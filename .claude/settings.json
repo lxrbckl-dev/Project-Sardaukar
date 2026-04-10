@@ -2,6 +2,11 @@
   "permissions": {
     "additionalDirectories": [
       "/Users/highlander/lxrbckl-dev/Project-Sardaukar/.claude"
+    ],
+    "allow": [
+      "Bash(git add:*)",
+      "Bash(git commit -m ':*)",
+      "Bash(git push:*)"
     ]
   },
   "agent": ".claude/agents/tpm-agent.md"
