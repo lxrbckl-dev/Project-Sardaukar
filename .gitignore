@@ -9,7 +9,3 @@ node_modules/
 *.log
 logs/
 sessions
-
-# Generated LaunchAgent plists (contain local paths)
-launchagents/*.plist
-!launchagents/*.plist.example

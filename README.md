@@ -70,7 +70,7 @@ gh auth refresh -s project  # adds the 'project' scope needed for kanban boards
 
 ### 2a. One-Time Interactive Acceptance
 
-Claude has two interactive prompts that must be accepted once before TPM can run headlessly via LaunchAgent. Run these from the project root:
+Claude has two interactive prompts that must be accepted once before TPM can run. Run these from the project root:
 
 ```bash
 # 1. Accept the workspace trust dialog (saved to ~/.claude.json)
@@ -82,55 +82,29 @@ claude remote-control --permission-mode bypassPermissions
 # Type 'y' when prompted, then Ctrl+C to stop
 ```
 
-These only need to be done once per machine. After that, TPM can boot cleanly via LaunchAgent without any prompts.
+These only need to be done once per machine.
 
 ### 3. Start
 
-There are two ways to start TPM:
+From the project root, run the wrapper script:
 
-**Option A: Manual (run it yourself)**
+```bash
+./start-tpm.sh
+```
 
-From the project root:
+This starts `claude remote-control` with the version-tagged session name. Leave the terminal running — closing it stops TPM.
+
+Or run the command directly:
 
 ```bash
 claude remote-control --permission-mode bypassPermissions
 ```
 
-**Option B: Auto-start on boot (macOS LaunchAgent)**
-
-Run the setup script once — TPM starts immediately and will auto-start on every login:
-
-```bash
-./setup-launchagents.sh
-```
-
-To stop: `launchctl unload ~/Library/LaunchAgents/com.sardaukar.tpm.plist`
-
-To update and restart after pulling new changes:
-
-```bash
-cd ~/Project-Sardaukar
-git pull
-./setup-launchagents.sh
-```
-
-If the LaunchAgent template hasn't changed, a lighter restart works:
-
-```bash
-launchctl kickstart -k gui/$(id -u)/com.sardaukar.tpm
-```
-
-Logs are at `logs/tpm-launch.log`.
-
 ### 4. Connect
 
-Once TPM is running (via either method), connect from your phone at [claude.ai/code](https://claude.ai/code). Your session should appear in the list automatically.
+Once TPM is running, connect from your phone at [claude.ai/code](https://claude.ai/code). Your session should appear in the list automatically.
 
-If you need the direct session URL (e.g., for sharing or troubleshooting), it's in the LaunchAgent log:
-
-```bash
-tail -20 logs/tpm-launch.log | grep claude.ai/code
-```
+The session URL is also printed in the terminal where TPM is running.
 
 CLAUDE.md instructs TPM to boot automatically. Just say "go" or any message to trigger the Startup Sequence.
 

@@ -240,7 +240,6 @@ All agents have web interaction tools. TPM uses them for quick lookups; SWE and 
 ├── VERSION                                # Current TPM version (managed by TPM)
 ├── .gitignore
 ├── start-tpm.sh                           # Wrapper that starts TPM with version-tagged session name
-├── setup-launchagents.sh                  # Generates and installs macOS LaunchAgent plists
 ├── .claude/
 │   ├── config/
 │   │   └── organizations.yml              # Org definitions (single source of truth)
@@ -248,8 +247,6 @@ All agents have web interaction tools. TPM uses them for quick lookups; SWE and 
 │       ├── tpm-agent.md                   # TPM agent definition (orchestrator)
 │       ├── swe-agent.md                   # SWE subagent definition
 │       └── qa-agent.md                    # QA subagent definition
-├── launchagents/                          # macOS LaunchAgent templates
-│   └── com.sardaukar.tpm.plist.example    # TPM auto-start template
 └── logs/                                  # Daily agent logs (gitignored, created at runtime)
     └── <org-name>/
         └── YYYY-MM-DD.md
