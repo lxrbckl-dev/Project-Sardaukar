@@ -106,6 +106,14 @@ Run the setup script once — TPM starts immediately and will auto-start on ever
 
 To stop: `launchctl unload ~/Library/LaunchAgents/com.sardaukar.tpm.plist`
 
+To update and restart after pulling new changes:
+
+```bash
+cd ~/Project-Sardaukar
+git pull
+launchctl kickstart -k gui/$(id -u)/com.sardaukar.tpm
+```
+
 Logs are at `logs/tpm-launch.log`.
 
 ### 4. Connect
