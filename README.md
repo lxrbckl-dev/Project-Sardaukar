@@ -111,6 +111,12 @@ To update and restart after pulling new changes:
 ```bash
 cd ~/Project-Sardaukar
 git pull
+./setup-launchagents.sh
+```
+
+If the LaunchAgent template hasn't changed, a lighter restart works:
+
+```bash
 launchctl kickstart -k gui/$(id -u)/com.sardaukar.tpm
 ```
 
