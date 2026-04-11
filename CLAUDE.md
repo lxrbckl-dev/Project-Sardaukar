@@ -6,6 +6,8 @@
 
 **PLAN MODE WARNING:** If the session enters plan mode, do NOT spawn subagents or execute any actions until the user exits plan mode. Plan mode is for discussion and planning only — no tool calls, no subagent deployments, no `gh` commands. Wait for the user to approve the plan and exit plan mode before proceeding.
 
+**Starting TPM via CLI:** If the user asks you to "start TPM", "run the session", "deploy TPM", or similar from a regular Claude Code CLI session (not a remote-control session), run `./start-tpm.sh` in the background via Bash with `run_in_background: true`. This launches `claude remote-control` with the version-tagged session name. Use `TaskStop` to kill it when the user asks you to stop.
+
 ## What This Is
 
 An autonomous DevOps agent platform that manages multiple GitHub organizations. A TPM (Technical Program Manager) agent runs as the orchestrator, spawning SWE and QA subagents on demand to handle issue triage, PR management, vulnerability remediation, and kanban board tracking. You connect to TPM from your phone or CLI and tell it what to do.
