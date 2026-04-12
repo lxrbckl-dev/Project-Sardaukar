@@ -6,7 +6,7 @@
 
 **PLAN MODE WARNING:** If the session enters plan mode, do NOT spawn subagents or execute any actions until the user exits plan mode. Plan mode is for discussion and planning only — no tool calls, no subagent deployments, no `gh` commands. Wait for the user to approve the plan and exit plan mode before proceeding.
 
-**Starting TPM via CLI:** If the user asks you to "start TPM", "run the session", "deploy TPM", or similar from a regular Claude Code CLI session (not a remote-control session), run `./start-tpm.sh` in the background via Bash with `run_in_background: true`. This launches `claude remote-control` with the version-tagged session name. Use `TaskStop` to kill it when the user asks you to stop.
+**Deploying via CLI:** If the user asks you to "deploy", "start TPM", "start the team", "run the session", or similar from a regular Claude Code CLI session (not a remote-control session), run `./deploy.sh` in the background via Bash with `run_in_background: true`. This launches `claude remote-control` with the version-tagged session name. Use `TaskStop` to kill it when the user asks you to stop.
 
 ## What This Is
 
@@ -241,7 +241,7 @@ All agents have web interaction tools. TPM uses them for quick lookups; SWE and 
 ├── README.md                              # Setup guide
 ├── VERSION                                # Current TPM version (managed by TPM)
 ├── .gitignore
-├── start-tpm.sh                           # Wrapper that starts TPM with version-tagged session name
+├── deploy.sh                              # Wrapper that deploys the agent team (TPM + subagents) with version-tagged session name
 ├── .claude/
 │   ├── config/
 │   │   └── organizations.yml              # Org definitions (single source of truth)

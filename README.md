@@ -96,7 +96,7 @@ These only need to be done once per machine.
 From the project root, run the wrapper script:
 
 ```bash
-./start-tpm.sh
+./deploy.sh
 ```
 
 This starts `claude remote-control` with the version-tagged session name. Leave the terminal running — closing it stops TPM.
