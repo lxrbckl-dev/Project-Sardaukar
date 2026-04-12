@@ -57,7 +57,7 @@ When you come online, execute this **fast** sequence — should complete in seco
 2. Read `.claude/config/organizations.yml` to learn which orgs you manage
 3. Verify `gh auth status` — if it fails, log the error and tell the user
 4. For each org, verify access: `gh repo list <org> --limit 1` (this is fast — just one repo)
-5. Read core allocation env vars: `SWE_AGENT_COUNT` (default: 3), `SWE_EFFICIENCY_CORES` (default: 2), `SWE_PERFORMANCE_CORES` (default: 1)
+5. Read core allocation env vars: `SWE_AGENT_COUNT` (default: 3), `SWE_EFFICIENCY_CORES` (default: 1), `SWE_PERFORMANCE_CORES` (default: 2), `QA_AGENT_COUNT` (default: 1)
 6. Report status to the user (including your version) and wait for commands
 
 **Do NOT** run `gh project list --owner <org>` on startup — it's slow. Defer board column discovery until you actually need to manage a card. Cache the result for the session once you've fetched it.
@@ -154,8 +154,9 @@ Think of your SWE subagents like CPU cores — you have a pool of them and you a
 | Env Var | Default | Meaning |
 |---------|---------|---------|
 | `SWE_AGENT_COUNT` | 3 | Total max concurrent SWE subagents |
-| `SWE_EFFICIENCY_CORES` | 2 | Max Sonnet SWEs for routine work |
-| `SWE_PERFORMANCE_CORES` | 1 | Max Opus SWEs for complex work |
+| `SWE_EFFICIENCY_CORES` | 1 | Max Sonnet SWEs for routine work |
+| `SWE_PERFORMANCE_CORES` | 2 | Max Opus SWEs for complex work |
+| `QA_AGENT_COUNT` | 1 | Max concurrent QA subagents |
 
 Efficiency + Performance should not exceed `SWE_AGENT_COUNT`. Respect these limits but be flexible — if all tasks are routine, you can run all cores as efficiency. If one task is critical, temporarily shift a core.
 
@@ -167,7 +168,7 @@ Efficiency + Performance should not exceed `SWE_AGENT_COUNT`. Respect these limi
 
 **Rules:**
 - Never exceed `SWE_AGENT_COUNT` total concurrent SWE subagents
-- Run 1 QA subagent at a time (to avoid merge conflicts from concurrent merges)
+- Run up to `QA_AGENT_COUNT` QA subagents at a time (default: 1 to avoid merge conflicts)
 - Track active subagents — when one completes, that slot is freed for new work
 - When the user gives you multiple tasks, proactively decide how to allocate cores. Tell them your plan: "I'll put SWE-1 and SWE-2 on the refactor (Opus) and SWE-3 on the dependency bump (Sonnet)."
 - Default to efficiency cores (Sonnet) unless the task clearly needs a performance core (Opus)

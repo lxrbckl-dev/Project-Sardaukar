@@ -8,10 +8,18 @@
 
 set -e
 
-# Agent core allocation — like CPU cores
+# ── Agent Team Configuration ───────────────────────────────────────
+# TPM — orchestrator (always 1, this is the session you're starting)
+export TPM_COUNT=1                # There can only be one TPM
+
+# SWE cores — like CPU cores, split between efficiency and performance
 export SWE_AGENT_COUNT=3          # Total max concurrent SWE subagents
-export SWE_EFFICIENCY_CORES=2     # Sonnet — routine tasks (dependency bumps, docs, simple fixes)
-export SWE_PERFORMANCE_CORES=1    # Opus — complex tasks (refactors, breaking changes, hard debugging)
+export SWE_EFFICIENCY_CORES=1     # Sonnet — routine tasks (dependency bumps, docs, simple fixes)
+export SWE_PERFORMANCE_CORES=2    # Opus — complex tasks (refactors, breaking changes, hard debugging)
+
+# QA — gatekeeper
+export QA_AGENT_COUNT=1           # Max concurrent QA subagents (1 recommended to avoid merge conflicts)
+# ───────────────────────────────────────────────────────────────────
 
 PROJECT_DIR="$(cd "$(dirname "$0")" && pwd)"
 cd "$PROJECT_DIR"
@@ -22,6 +30,22 @@ git pull --ff-only || echo "[deploy] git pull failed or skipped — continuing w
 
 VERSION="$(cat "$PROJECT_DIR/VERSION" 2>/dev/null || echo "unknown")"
 SESSION_NAME="Sardaukar TPM v${VERSION}"
+
+# Display team configuration
+echo ""
+ORGS=$(grep 'name:' .claude/config/organizations.yml 2>/dev/null | sed 's/.*name: //' | tr '\n' ', ' | sed 's/, $//')
+echo "┌─────────────────────────────────────────────┐"
+echo "│  Sardaukar Agent Team v${VERSION}                  │"
+echo "├─────────────────────────────────────────────┤"
+echo "│  TPM (orchestrator)       ${TPM_COUNT} session          │"
+echo "│  SWE cores (total)        ${SWE_AGENT_COUNT} agents           │"
+echo "│    ├─ Efficiency (Sonnet) ${SWE_EFFICIENCY_CORES} core             │"
+echo "│    └─ Performance (Opus)  ${SWE_PERFORMANCE_CORES} cores            │"
+echo "│  QA (gatekeeper)          ${QA_AGENT_COUNT} agent            │"
+echo "├─────────────────────────────────────────────┤"
+echo "│  Orgs: ${ORGS}"
+echo "└─────────────────────────────────────────────┘"
+echo ""
 
 if [ "$1" = "--local" ]; then
     echo "[deploy] Starting $SESSION_NAME in local CLI mode..."
