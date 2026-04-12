@@ -8,8 +8,10 @@
 
 set -e
 
-# Max concurrent SWE subagents TPM can spawn (default: 3)
-export SWE_AGENT_COUNT=3
+# Agent core allocation — like CPU cores
+export SWE_AGENT_COUNT=3          # Total max concurrent SWE subagents
+export SWE_EFFICIENCY_CORES=2     # Sonnet — routine tasks (dependency bumps, docs, simple fixes)
+export SWE_PERFORMANCE_CORES=1    # Opus — complex tasks (refactors, breaking changes, hard debugging)
 
 PROJECT_DIR="$(cd "$(dirname "$0")" && pwd)"
 cd "$PROJECT_DIR"

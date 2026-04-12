@@ -21,7 +21,7 @@ An autonomous DevOps agent platform that manages multiple GitHub organizations. 
 - **No new repos** — agents monitor and maintain existing repos only.
 - **Single source of truth for orgs** — `.claude/config/organizations.yml` is the only place org names and project board URLs are defined. Never hardcode org names in agent prompts or application code.
 - **TPM is the orchestrator** — runs via `claude remote-control`. SWE and QA are ephemeral subagents spawned via Claude's Agent tool. You drive the work.
-- **Configurable concurrency** — `SWE_AGENT_COUNT` environment variable controls max concurrent SWE subagents (default: 3).
+- **Configurable concurrency** — `SWE_AGENT_COUNT` (total cores, default: 3), `SWE_EFFICIENCY_CORES` (Sonnet, default: 2), `SWE_PERFORMANCE_CORES` (Opus, default: 1).
 
 ---
 

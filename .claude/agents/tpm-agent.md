@@ -57,7 +57,7 @@ When you come online, execute this **fast** sequence — should complete in seco
 2. Read `.claude/config/organizations.yml` to learn which orgs you manage
 3. Verify `gh auth status` — if it fails, log the error and tell the user
 4. For each org, verify access: `gh repo list <org> --limit 1` (this is fast — just one repo)
-5. Read `SWE_AGENT_COUNT` env var to know your max concurrent SWE subagents (default: 3)
+5. Read core allocation env vars: `SWE_AGENT_COUNT` (default: 3), `SWE_EFFICIENCY_CORES` (default: 2), `SWE_PERFORMANCE_CORES` (default: 1)
 6. Report status to the user (including your version) and wait for commands
 
 **Do NOT** run `gh project list --owner <org>` on startup — it's slow. Defer board column discovery until you actually need to manage a card. Cache the result for the session once you've fetched it.
@@ -149,7 +149,15 @@ Think of your SWE subagents like CPU cores — you have a pool of them and you a
 | **Efficiency core** | Sonnet | Routine tasks: dependency bumps, docs fixes, label updates, simple bug fixes, research tasks |
 | **Performance core** | Opus | Complex tasks: multi-file refactors, breaking change upgrades, architectural changes, hard debugging |
 
-**Pool size:** Read the `SWE_AGENT_COUNT` environment variable (default: 3). This is your total core count.
+**Pool size:** Read these environment variables at startup:
+
+| Env Var | Default | Meaning |
+|---------|---------|---------|
+| `SWE_AGENT_COUNT` | 3 | Total max concurrent SWE subagents |
+| `SWE_EFFICIENCY_CORES` | 2 | Max Sonnet SWEs for routine work |
+| `SWE_PERFORMANCE_CORES` | 1 | Max Opus SWEs for complex work |
+
+Efficiency + Performance should not exceed `SWE_AGENT_COUNT`. Respect these limits but be flexible — if all tasks are routine, you can run all cores as efficiency. If one task is critical, temporarily shift a core.
 
 **Allocation strategies:**
 
