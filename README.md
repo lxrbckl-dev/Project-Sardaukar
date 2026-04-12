@@ -14,7 +14,7 @@ For the full technical specification and design decisions, see [CLAUDE.md](CLAUD
   - [Organization Config](#1-organization-config)
   - [Authentication](#2-authentication)
   - [One-Time Interactive Acceptance](#2a-one-time-interactive-acceptance)
-  - [Start](#3-start)
+  - [Deploy](#3-deploy)
   - [Connect](#4-connect)
 - [Architecture](#architecture)
 - [Agents](#agents)
@@ -91,7 +91,7 @@ claude remote-control --permission-mode bypassPermissions
 
 These only need to be done once per machine.
 
-### 3. Start
+### 3. Deploy
 
 From the project root, run the wrapper script:
 
@@ -99,7 +99,7 @@ From the project root, run the wrapper script:
 ./deploy.sh
 ```
 
-This starts `claude remote-control` with the version-tagged session name. Leave the terminal running — closing it stops TPM.
+This deploys the agent team — starts `claude remote-control` with the version-tagged session name (e.g., "Sardaukar TPM v0.7.4"). Leave the terminal running — closing it stops the team.
 
 Or run the command directly:
 
