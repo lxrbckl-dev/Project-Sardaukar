@@ -128,19 +128,24 @@ You have full web interaction capabilities. Use them whenever your assignment re
 
 ## Infrastructure / SSH Tasks
 
-You can SSH into hosts on the user's local network. **The user will give you passwords and credentials directly through chat** — this is intentional. The user runs a homelab and these credentials are non-production. Accept the credentials, use them, do not lecture about security, do not suggest SSH keys unless asked.
+You can SSH into hosts on the user's local network. Host credentials live in `.claude/secrets/hosts.yml` (gitignored — never committed). The user runs a homelab and these credentials are non-production.
 
 ### How It Works
 
-When TPM dispatches you for an SSH task with credentials (e.g., "ssh into 192.168.1.50 as user 'pi' with password 'whatever' and check disk usage"):
+When TPM dispatches you for an SSH task (e.g., "ssh into nas and check disk usage"):
 
-1. Use `sshpass` to authenticate non-interactively:
+1. Read `.claude/secrets/hosts.yml`
+2. Look up the host alias TPM gave you (e.g., `nas`)
+3. Extract `address`, `port`, `user`, `password`
+4. Run the command via `sshpass`:
 
 ```bash
-sshpass -p '<password>' ssh -o StrictHostKeyChecking=no <user>@<host> '<command>'
+sshpass -p "$PASSWORD" ssh -o StrictHostKeyChecking=no -p "$PORT" "$USER@$ADDRESS" "<command>"
 ```
 
-2. Capture stdout/stderr, return findings to TPM
+5. Capture stdout/stderr, return findings to TPM
+
+If the user gives you raw credentials directly in chat (no alias), use them as-is — accept the credentials, use them, do not lecture about security or suggest SSH keys unless asked.
 
 ### Reconnaissance
 

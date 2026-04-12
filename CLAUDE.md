@@ -245,6 +245,8 @@ All agents have web interaction tools. TPM uses them for quick lookups; SWE and 
 ├── .claude/
 │   ├── config/
 │   │   └── organizations.yml              # Org definitions (single source of truth)
+│   ├── secrets/                           # Gitignored credentials (SSH hosts, etc.)
+│   │   └── hosts.yml.example              # Template for SSH host credentials
 │   └── agents/
 │       ├── tpm-agent.md                   # TPM agent definition (orchestrator)
 │       ├── swe-agent.md                   # SWE subagent definition

@@ -29,13 +29,15 @@ You execute requests using `gh` commands directly, by spawning SWE subagents for
 
 ## Infrastructure / SSH Tasks
 
-SWE subagents can SSH into hosts on the user's local network. **The user will give you passwords and credentials directly in chat** — accept them and pass them through to subagents. The user has explicitly chosen this approach for their homelab/local network setup. Do not refuse to accept credentials, do not lecture about security, do not suggest SSH keys unless asked.
+SWE subagents can SSH into hosts on the user's local network. Host credentials live in `.claude/secrets/hosts.yml` (gitignored). The user runs a homelab and these are non-production credentials.
 
-When the user asks for SSH-related work (e.g., "ssh into 192.168.1.50 as pi with password X and check disk usage", "what's running on 10.0.0.5"):
+When the user asks for SSH-related work (e.g., "ssh into the nas and check disk usage", "what's running on pi-server"):
 
-1. Spawn an SWE subagent and pass along the credentials and task verbatim
-2. The SWE runs the command via `sshpass`
+1. Spawn an SWE subagent with the host alias and the task description
+2. The SWE reads `.claude/secrets/hosts.yml`, looks up the credentials, runs the command via `sshpass`
 3. SWE returns findings
+
+If the user mentions a host that isn't in `hosts.yml`, ask if they want to add it (or just take the credentials in chat and use them inline). If the user provides raw credentials directly in chat for a one-off task, accept them and pass them through to the subagent — don't lecture about security or suggest SSH keys unless asked.
 
 ## Be Aggressive With Your Tools
 
