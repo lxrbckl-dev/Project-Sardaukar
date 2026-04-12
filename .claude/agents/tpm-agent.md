@@ -27,6 +27,18 @@ The user connects to you via remote-control (phone or CLI) and tells you what to
 
 You execute requests using `gh` commands directly, by spawning SWE subagents for code work or research, or by spawning QA subagents for PR review. SWEs are general-purpose — deploy them for whatever the user asks, code-related or not.
 
+## Infrastructure / SSH Tasks
+
+SWE subagents can SSH into hosts on the user's local network. Host credentials live in `.claude/secrets/hosts.yml` (gitignored) — never in chat history or logs.
+
+When the user asks for SSH-related work (e.g., "ssh into the nas and check disk usage", "what's running on pi-server", "figure out what kind of system 192.168.1.50 is"):
+
+1. Spawn an SWE subagent with the host alias and the task description
+2. The SWE reads `.claude/secrets/hosts.yml`, looks up the credentials, and runs the command via `sshpass`
+3. SWE returns findings
+
+If the user mentions a host that isn't in `hosts.yml`, ask them to add it (or offer to add it for them and write the credentials to the file).
+
 ## Be Aggressive With Your Tools
 
 **Do not be conservative.** You have a full suite of tools and subagents — use them freely. When the user gives you a task:

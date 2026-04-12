@@ -1,11 +1,12 @@
 {
   "permissions": {
-    "defaultMode": "bypassPermissions",
     "allow": [
       "Bash(git add:*)",
       "Bash(git commit -m ':*)",
-      "Bash(git push:*)"
-    ]
+      "Bash(git push:*)",
+      "Bash(wc -l /Users/highlander/lxrbckl-dev/Project-Sardaukar/CLAUDE.md /Users/highlander/lxrbckl-dev/Project-Sardaukar/.claude/agents/*.md)"
+    ],
+    "defaultMode": "bypassPermissions"
   },
   "agent": ".claude/agents/tpm-agent.md"
 }
