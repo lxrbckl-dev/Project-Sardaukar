@@ -96,16 +96,16 @@ These only need to be done once per machine.
 From the project root, run the wrapper script:
 
 ```bash
-./deploy.sh
+./deploy.sh            # remote-control mode — connect via claude.ai/code
+./deploy.sh --local    # interactive CLI mode — chat directly in terminal
 ```
 
-This deploys the agent team — pulls the latest changes via `git pull --ff-only`, then starts `claude remote-control` with the version-tagged session name (e.g., "Sardaukar TPM v0.7.7"). Leave the terminal running — closing it stops the team.
+Both modes pull the latest changes via `git pull --ff-only` first, then start the team with bypass permissions. Leave the terminal running — closing it stops the team.
 
-Or run the command directly (skips the git pull):
-
-```bash
-claude remote-control --permission-mode bypassPermissions
-```
+| Mode | Command | How you interact |
+|------|---------|------------------|
+| Remote | `./deploy.sh` | Connect from phone/browser at [claude.ai/code](https://claude.ai/code) |
+| Local | `./deploy.sh --local` | Type directly in the terminal |
 
 #### Optional: Global `sardaukar` Alias
 
@@ -118,14 +118,12 @@ source ~/.zshrc
 
 (Use `~/.bashrc` if you're on bash. Replace `~/Project-Sardaukar` with your actual project path.)
 
-After that, just type `sardaukar` from anywhere:
+After that, from anywhere:
 
 ```bash
-cd ~/some-other-project
-sardaukar
+sardaukar              # remote-control mode
+sardaukar --local      # interactive CLI mode
 ```
-
-The team boots with the latest changes pulled automatically.
 
 ### 4. Connect
 

@@ -1,6 +1,10 @@
 #!/bin/bash
 # Deploys the agent team — TPM as orchestrator with on-demand SWE/QA subagents.
-# Pulls latest from git, then starts claude remote-control with a version-tagged session name.
+# Pulls latest from git, then starts claude in the chosen mode.
+#
+# Usage:
+#   ./deploy.sh          → remote-control mode (connect via claude.ai/code)
+#   ./deploy.sh --local  → interactive CLI mode (chat directly in terminal)
 
 set -e
 
@@ -17,5 +21,11 @@ git pull --ff-only || echo "[deploy] git pull failed or skipped — continuing w
 VERSION="$(cat "$PROJECT_DIR/VERSION" 2>/dev/null || echo "unknown")"
 SESSION_NAME="Sardaukar TPM v${VERSION}"
 
-echo "[deploy] Starting $SESSION_NAME..."
-exec claude remote-control --permission-mode bypassPermissions --name "$SESSION_NAME"
+if [ "$1" = "--local" ]; then
+    echo "[deploy] Starting $SESSION_NAME in local CLI mode..."
+    exec claude --dangerously-skip-permissions
+else
+    echo "[deploy] Starting $SESSION_NAME in remote-control mode..."
+    echo "[deploy] Connect from your phone at https://claude.ai/code"
+    exec claude remote-control --permission-mode bypassPermissions --name "$SESSION_NAME"
+fi
