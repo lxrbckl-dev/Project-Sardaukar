@@ -23,10 +23,17 @@ For the full technical specification and design decisions, see [CLAUDE.md](CLAUD
 
 ## Prerequisites
 
+Runs on any Unix-like system (macOS, Linux, WSL).
+
 - [Claude Code CLI](https://claude.ai/code) installed and authenticated (`claude auth login`)
 - [GitHub CLI](https://cli.github.com/) installed and authenticated (`gh auth login`)
 - A Claude Max, Pro, or Team subscription (for `remote-control`)
 - Playwright plugin: `claude plugin install playwright@claude-plugins-official`
+- (Optional, for SSH tasks) `sshpass` installed:
+  - macOS: `brew install hudochenkov/sshpass/sshpass`
+  - Debian/Ubuntu: `sudo apt install sshpass`
+  - Fedora/RHEL: `sudo dnf install sshpass`
+  - Arch: `sudo pacman -S sshpass`
 
 ---
 

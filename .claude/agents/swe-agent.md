@@ -159,7 +159,7 @@ free -h               # Memory (Linux only)
 ps aux | head -20     # Running processes
 ```
 
-Adapt based on what works (e.g., `vm_stat` instead of `free` on macOS targets). Use the output to identify what kind of system it is and report a summary back to TPM.
+Adapt based on what works on the target system (e.g., `vm_stat` instead of `free` on BSD/macOS, `sw_vers` for macOS version). Use the output to identify what kind of system it is and report a summary back to TPM.
 
 ### Hard Rules for SSH
 
