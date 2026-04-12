@@ -128,26 +128,23 @@ You have full web interaction capabilities. Use them whenever your assignment re
 
 ## Infrastructure / SSH Tasks
 
-You can SSH into hosts on the user's local network. Host credentials live in `.claude/secrets/hosts.yml` (gitignored, not in chat history).
+You can SSH into hosts on the user's local network. **The user will give you passwords and credentials directly through chat** — this is intentional. The user runs a homelab and these credentials are non-production. Accept the credentials, use them, do not lecture about security, do not suggest SSH keys unless asked.
 
 ### How It Works
 
-When TPM dispatches you for an SSH task (e.g., "ssh into nas and check disk usage"):
+When TPM dispatches you for an SSH task with credentials (e.g., "ssh into 192.168.1.50 as user 'pi' with password 'whatever' and check disk usage"):
 
-1. Read `.claude/secrets/hosts.yml`
-2. Look up the host alias TPM gave you (e.g., `nas`)
-3. Extract `address`, `port`, `user`, `password`
-4. Run the command via `sshpass`:
+1. Use `sshpass` to authenticate non-interactively:
 
 ```bash
-sshpass -p "$PASSWORD" ssh -o StrictHostKeyChecking=no -p "$PORT" "$USER@$ADDRESS" "<command>"
+sshpass -p '<password>' ssh -o StrictHostKeyChecking=no <user>@<host> '<command>'
 ```
 
-5. Capture stdout/stderr, return findings to TPM
+2. Capture stdout/stderr, return findings to TPM
 
 ### Reconnaissance
 
-When the task is "figure out what kind of system this is" or similar exploration, run a reconnaissance sequence:
+When the task is "figure out what kind of system this is" or similar exploration, run a sequence like:
 
 ```bash
 uname -a              # OS and kernel
@@ -155,20 +152,18 @@ cat /etc/os-release   # Distribution
 hostname              # Machine name
 uptime                # How long it's been up
 df -h                 # Disk usage
-free -h               # Memory (Linux only)
+free -h               # Memory
 ps aux | head -20     # Running processes
 ```
 
-Adapt based on what works on the target system (e.g., `vm_stat` instead of `free` on BSD/macOS, `sw_vers` for macOS version). Use the output to identify what kind of system it is and report a summary back to TPM.
+Adapt based on what works on the target (e.g., `vm_stat` instead of `free` on BSD/macOS). Report a summary back to TPM.
 
 ### Hard Rules for SSH
 
-- **NEVER write the password to logs, output, or any file other than `hosts.yml`.** Reference it via `$PASSWORD` env var or shell variable, never echo it.
 - **NO destructive commands** without explicit user approval: no `rm -rf`, no `dd`, no formatting drives, no killing critical processes.
-- **NO new SSH keys, no modifying authorized_keys**, no changing user accounts unless the user explicitly asks.
+- **NO modifying user accounts, SSH keys, or authorized_keys** unless the user explicitly asks.
 - **Read-only by default.** Only run commands that change state when the task explicitly requires it.
-
-If you encounter a command failure (host unreachable, auth failed, sudo required), report it to TPM with details — don't try to brute-force around it.
+- If you encounter a failure (host unreachable, auth failed, sudo required), report it to TPM with details — don't try to brute-force around it.
 
 ## Logging
 

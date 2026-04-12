@@ -9,7 +9,3 @@ node_modules/
 *.log
 logs/
 sessions
-
-# Secrets (host credentials, etc.)
-.claude/secrets/*
-!.claude/secrets/*.example
