@@ -7,9 +7,9 @@
 #   2. Restart the TPM session
 
 organizations:
-  - name: herzog-org
+  - name: t5-labs
     project_number: 1
-    project_url: https://github.com/orgs/herzog-org/projects/1
+    project_url: https://github.com/orgs/t5-labs/projects/1
   - name: lxrbckl-dev
     project_number: 1
     project_url: https://github.com/orgs/lxrbckl-dev/projects/1
