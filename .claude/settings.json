@@ -1,18 +1,10 @@
 {
   "permissions": {
+    "defaultMode": "bypassPermissions",
     "allow": [
       "Bash(git add:*)",
       "Bash(git commit -m ':*)",
-      "Bash(git push:*)",
-      "Bash(wc -l /Users/highlander/lxrbckl-dev/Project-Sardaukar/CLAUDE.md /Users/highlander/lxrbckl-dev/Project-Sardaukar/.claude/agents/*.md)",
-      "Bash(rm -f /Users/highlander/lxrbckl-dev/Project-Sardaukar/logs/tpm-launch.log /Users/highlander/lxrbckl-dev/Project-Sardaukar/logs/tpm-launch.err)",
-      "Bash(rmdir /Users/highlander/lxrbckl-dev/Project-Sardaukar/.claude/agents/logs)"
-    ],
-    "defaultMode": "bypassPermissions",
-    "additionalDirectories": [
-      "/Users/highlander/lxrbckl-dev/Project-Sardaukar/.claude/secrets",
-      "/Users/highlander/lxrbckl-dev/Project-Sardaukar/.claude/agents/logs"
+      "Bash(git push:*)"
     ]
-  },
-  "agent": ".claude/agents/tpm-agent.md"
+  }
 }
