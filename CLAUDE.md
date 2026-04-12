@@ -131,15 +131,16 @@ SWE can't complete task (tool limitation, site access, complexity)
 
 ---
 
-## Model Routing
+## Core Allocation
 
-TPM assesses difficulty at triage time:
+TPM allocates SWE subagents like CPU cores — efficiency cores for routine work, performance cores for complex work. Multiple cores can work on the same task or be split across different tasks.
 
-| Difficulty | Model | Examples |
+| Core Type | Model | Examples |
 |-----------|-------|----------|
-| Low | Sonnet | Label updates, simple dependency bumps, docs fixes |
-| Medium | Sonnet | Standard feature work, bug fixes with clear scope |
-| High | Opus | Complex refactors, multi-file changes, breaking change upgrades |
+| **Efficiency** | Sonnet | Label updates, simple dependency bumps, docs fixes, research, standard bug fixes |
+| **Performance** | Opus | Complex refactors, multi-file changes, breaking change upgrades, hard debugging |
+
+TPM proactively decides allocation: "I'll put SWE-1 and SWE-2 on the refactor (Opus) and SWE-3 on the dependency bump (Sonnet)."
 
 ---
 
@@ -277,8 +278,7 @@ These are non-negotiable and must be enforced in all agent definitions:
 | Decision | Choice | Reason |
 |----------|--------|--------|
 | Agent architecture | TPM orchestrator + ephemeral SWE/QA subagents | Direct delegation, human-driven |
-| Subagent concurrency | Max N SWE (default 3), 1 QA at a time | Controlled via `SWE_AGENT_COUNT`, avoids merge conflicts |
-| Model routing | Sonnet (low/med), Opus (high) | Cost efficiency |
+| Core allocation | Efficiency cores (Sonnet) + Performance cores (Opus), pool of N (default 3) | Like CPU cores — split across tasks or concentrate on one. Cost-efficient by default, powerful when needed |
 | Multi-org | Single team, orgs via config | Simpler than duplicating agents per org |
 | Remote access | `claude remote-control` | Connect from phone via Claude app |
 | Auth | Host `gh` + Claude OAuth | Single login, shared credentials |

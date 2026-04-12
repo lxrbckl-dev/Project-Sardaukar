@@ -138,12 +138,31 @@ Review:
 - Type: Agent PR (eligible for merge if tests pass)
 ```
 
-### Subagent Limits
+### Subagent Limits and Core Allocation
 
-- Read the `SWE_AGENT_COUNT` environment variable to know the maximum number of concurrent SWE subagents you may run (default: 3)
-- You may run up to that many SWE subagents in parallel
+Think of your SWE subagents like CPU cores — you have a pool of them and you allocate them across tasks based on priority and complexity.
+
+**Core types:**
+
+| Core Type | Model | When to use |
+|-----------|-------|-------------|
+| **Efficiency core** | Sonnet | Routine tasks: dependency bumps, docs fixes, label updates, simple bug fixes, research tasks |
+| **Performance core** | Opus | Complex tasks: multi-file refactors, breaking change upgrades, architectural changes, hard debugging |
+
+**Pool size:** Read the `SWE_AGENT_COUNT` environment variable (default: 3). This is your total core count.
+
+**Allocation strategies:**
+
+- **Single task, single core:** One SWE on one task (e.g., SWE-1 fixes a bug in repo-a). Use for simple, isolated tasks.
+- **Single task, multiple cores:** Two or more SWEs on the same task working different parts in parallel (e.g., SWE-1 handles the backend changes in repo-a while SWE-2 handles the frontend). Use for large features or multi-part fixes.
+- **Multiple tasks, split cores:** Split your pool across different tasks (e.g., SWE-1 and SWE-2 work on urgent Task A as performance cores, SWE-3 handles routine Task B as an efficiency core). Use when the user gives you multiple things to do.
+
+**Rules:**
+- Never exceed `SWE_AGENT_COUNT` total concurrent SWE subagents
 - Run 1 QA subagent at a time (to avoid merge conflicts from concurrent merges)
 - Track active subagents — when one completes, that slot is freed for new work
+- When the user gives you multiple tasks, proactively decide how to allocate cores. Tell them your plan: "I'll put SWE-1 and SWE-2 on the refactor (Opus) and SWE-3 on the dependency bump (Sonnet)."
+- Default to efficiency cores (Sonnet) unless the task clearly needs a performance core (Opus)
 
 ### Handling Subagent Results
 
@@ -200,15 +219,16 @@ When the user asks you to check on things or gives you work:
 - **Dependabot alerts:** Assess difficulty, spawn SWE subagent to fix
 - **Human PRs:** Track on board, spawn QA to review (QA will NOT merge — just review)
 
-### 2. Model Routing
+### 2. Core Allocation
 
-Assess difficulty at triage time and recommend to the SWE subagent:
+When triaging work, decide which core type each task needs and how to allocate your SWE pool. See "Subagent Limits and Core Allocation" above for the full allocation model.
 
-| Difficulty | Model | Examples |
-|-----------|-------|----------|
-| Low | Sonnet | Label updates, simple dependency bumps, docs fixes |
-| Medium | Sonnet | Standard feature work, bug fixes with clear scope |
-| High | Opus | Complex refactors, multi-file changes, breaking change upgrades |
+Quick reference:
+
+| Difficulty | Core Type | Model |
+|-----------|-----------|-------|
+| Low/Medium | Efficiency | Sonnet |
+| High | Performance | Opus |
 
 ### 3. Kanban Board Management
 
