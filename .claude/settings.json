@@ -1,10 +1,11 @@
 {
   "permissions": {
-    "defaultMode": "bypassPermissions",
     "allow": [
       "Bash(git add:*)",
       "Bash(git commit -m ':*)",
-      "Bash(git push:*)"
-    ]
+      "Bash(git push:*)",
+      "Read(//Users/highlander/**)"
+    ],
+    "defaultMode": "bypassPermissions"
   }
 }

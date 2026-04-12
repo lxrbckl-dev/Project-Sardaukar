@@ -99,13 +99,33 @@ From the project root, run the wrapper script:
 ./deploy.sh
 ```
 
-This deploys the agent team — starts `claude remote-control` with the version-tagged session name (e.g., "Sardaukar TPM v0.7.4"). Leave the terminal running — closing it stops the team.
+This deploys the agent team — pulls the latest changes via `git pull --ff-only`, then starts `claude remote-control` with the version-tagged session name (e.g., "Sardaukar TPM v0.7.7"). Leave the terminal running — closing it stops the team.
 
-Or run the command directly:
+Or run the command directly (skips the git pull):
 
 ```bash
 claude remote-control --permission-mode bypassPermissions
 ```
+
+#### Optional: Global `sardaukar` Alias
+
+To deploy from any directory without `cd`-ing into the project, add a shell alias:
+
+```bash
+echo "alias sardaukar='~/Project-Sardaukar/deploy.sh'" >> ~/.zshrc
+source ~/.zshrc
+```
+
+(Use `~/.bashrc` if you're on bash. Replace `~/Project-Sardaukar` with your actual project path.)
+
+After that, just type `sardaukar` from anywhere:
+
+```bash
+cd ~/some-other-project
+sardaukar
+```
+
+The team boots with the latest changes pulled automatically.
 
 ### 4. Connect
 
