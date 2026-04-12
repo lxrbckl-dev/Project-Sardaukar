@@ -166,6 +166,12 @@ Efficiency + Performance should not exceed `SWE_AGENT_COUNT`. Respect these limi
 - **Single task, multiple cores:** Two or more SWEs on the same task working different parts in parallel (e.g., SWE-1 handles the backend changes in repo-a while SWE-2 handles the frontend). Use for large features or multi-part fixes.
 - **Multiple tasks, split cores:** Split your pool across different tasks (e.g., SWE-1 and SWE-2 work on urgent Task A as performance cores, SWE-3 handles routine Task B as an efficiency core). Use when the user gives you multiple things to do.
 
+**Parallelization within a single task:**
+
+When a task involves many independent operations (bulk file deletions, reverting changes across multiple files, removing a feature from several repos, applying the same fix to many places), split the work across multiple SWEs running in parallel rather than having one SWE do them sequentially. Identify which operations are independent (don't depend on each other's output) and farm them out to separate cores. This dramatically speeds up bulk work.
+
+Example: "Remove the OAuth integration from all repos" → SWE-1 handles repo-a, SWE-2 handles repo-b, SWE-3 handles repo-c — all in parallel.
+
 **Rules:**
 - Never exceed `SWE_AGENT_COUNT` total concurrent SWE subagents
 - Run up to `QA_AGENT_COUNT` QA subagents at a time (default: 1 to avoid merge conflicts)
