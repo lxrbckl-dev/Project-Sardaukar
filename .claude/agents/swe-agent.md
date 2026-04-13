@@ -113,6 +113,7 @@ You have full web interaction capabilities. Use them whenever your assignment re
 - Use to verify UI changes visually — navigate to the page and screenshot it.
 - Use to write and validate Playwright test code.
 - Key tools: `browser_navigate`, `browser_click`, `browser_type`, `browser_screenshot`, `browser_snapshot`.
+- If `PLAYWRIGHT_HEADLESS=1` is set (via `--headless` flag at deploy), run all Playwright operations without opening a visible browser window.
 
 **Read** (image analysis) — Claude reads images natively.
 - Pass a screenshot file path to the Read tool and Claude will see the image.

@@ -106,6 +106,8 @@ Both modes pull the latest changes via `git pull --ff-only` first, then start th
 |------|---------|------------------|
 | Remote | `./deploy.sh` | Connect from phone/browser at [claude.ai/code](https://claude.ai/code) |
 | Local | `./deploy.sh --local` | Type directly in the terminal |
+| Headless | `./deploy.sh --headless` | Remote mode, Playwright runs without opening a browser window |
+| Local + Headless | `./deploy.sh --local --headless` | CLI mode, Playwright headless |
 
 #### Optional: Global `sardaukar` Alias
 
@@ -121,8 +123,10 @@ source ~/.zshrc
 After that, from anywhere:
 
 ```bash
-sardaukar              # remote-control mode
-sardaukar --local      # interactive CLI mode
+sardaukar                    # remote-control mode
+sardaukar --local            # interactive CLI mode
+sardaukar --headless         # remote + no browser window for Playwright
+sardaukar --local --headless # CLI + no browser window
 ```
 
 ### 4. Connect

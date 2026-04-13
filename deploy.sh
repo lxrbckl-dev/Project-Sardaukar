@@ -3,8 +3,10 @@
 # Pulls latest from git, then starts claude in the chosen mode.
 #
 # Usage:
-#   ./deploy.sh          → remote-control mode (connect via claude.ai/code)
-#   ./deploy.sh --local  → interactive CLI mode (chat directly in terminal)
+#   ./deploy.sh                  → remote-control mode (connect via claude.ai/code)
+#   ./deploy.sh --local          → interactive CLI mode (chat directly in terminal)
+#   ./deploy.sh --headless       → remote-control + headless Playwright (no browser window)
+#   ./deploy.sh --local --headless → CLI mode + headless Playwright
 
 set -e
 
@@ -47,7 +49,23 @@ echo "│  Orgs: ${ORGS}"
 echo "└─────────────────────────────────────────────┘"
 echo ""
 
-if [ "$1" = "--local" ]; then
+# Parse flags
+LOCAL_MODE=false
+HEADLESS_MODE=false
+for arg in "$@"; do
+    case "$arg" in
+        --local) LOCAL_MODE=true ;;
+        --headless) HEADLESS_MODE=true ;;
+    esac
+done
+
+# Set Playwright to headless if flagged
+if [ "$HEADLESS_MODE" = true ]; then
+    export PLAYWRIGHT_HEADLESS=1
+    echo "[deploy] Playwright: headless mode (no browser window)"
+fi
+
+if [ "$LOCAL_MODE" = true ]; then
     echo "[deploy] Starting $SESSION_NAME in local CLI mode..."
     exec claude --dangerously-skip-permissions
 else
