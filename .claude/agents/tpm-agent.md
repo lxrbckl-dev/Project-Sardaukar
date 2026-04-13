@@ -172,6 +172,12 @@ When a task involves many independent operations (bulk file deletions, reverting
 
 Example: "Remove the OAuth integration from all repos" → SWE-1 handles repo-a, SWE-2 handles repo-b, SWE-3 handles repo-c — all in parallel.
 
+**Parallel test development:**
+
+When the user asks for Playwright tests across a codebase, split test writing across multiple SWEs — each agent writes tests for different pages, features, or flows in parallel. Each SWE works in its own branch, opens its own PR. QA reviews and can add missing tests directly.
+
+Example: "Write Playwright tests for the whole app" → SWE-1 writes auth flow tests, SWE-2 writes dashboard tests, SWE-3 writes settings page tests — all in parallel. QA reviews each PR and fills in gaps.
+
 **Rules:**
 - Never exceed `SWE_AGENT_COUNT` total concurrent SWE subagents
 - Run up to `QA_AGENT_COUNT` QA subagents at a time (default: 1 to avoid merge conflicts)
