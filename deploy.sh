@@ -34,19 +34,47 @@ VERSION="$(cat "$PROJECT_DIR/VERSION" 2>/dev/null || echo "unknown")"
 SESSION_NAME="Sardaukar TPM v${VERSION}"
 
 # Display team configuration
+ORGS=$(grep 'name:' .claude/config/organizations.yml 2>/dev/null | sed 's/.*name: //' | tr '\n' ', ' | sed 's/,[ ]*$//')
+
+INFO1="TPM (orchestrator)           ${TPM_COUNT} session"
+INFO2="SWE (performance/Opus)       ${SWE_PERFORMANCE_CORES} cores"
+INFO3="SWE (efficiency/Sonnet)      ${SWE_EFFICIENCY_CORES} core"
+INFO4="QA  (gatekeeper)             ${QA_AGENT_COUNT} agent"
+INFO5="Orgs: ${ORGS}"
+
+# Print a padded line inside the box
+sardaukar_line() {
+    local text="$1"
+    local vis=${#text} max=75
+    if [ $vis -gt $max ]; then text="${text:0:$((max-3))}..."; vis=$max; fi
+    printf -v pad '%*s' $((max - vis)) ''
+    echo "│   ${text}${pad}│"
+}
+
+REPO_URL="github.com/lxrbckl-dev/Project-Sardaukar"
+
+printf -v BORDER '%78s' ''; BORDER="${BORDER// /─}"
 echo ""
-ORGS=$(grep 'name:' .claude/config/organizations.yml 2>/dev/null | sed 's/.*name: //' | tr '\n' ', ' | sed 's/, $//')
-echo "┌─────────────────────────────────────────────┐"
-echo "│  Sardaukar Agent Team v${VERSION}                  │"
-echo "├─────────────────────────────────────────────┤"
-echo "│  TPM (orchestrator)       ${TPM_COUNT} session          │"
-echo "│  SWE cores (total)        ${SWE_AGENT_COUNT} agents           │"
-echo "│    ├─ Efficiency (Sonnet) ${SWE_EFFICIENCY_CORES} core             │"
-echo "│    └─ Performance (Opus)  ${SWE_PERFORMANCE_CORES} cores            │"
-echo "│  QA (gatekeeper)          ${QA_AGENT_COUNT} agent            │"
-echo "├─────────────────────────────────────────────┤"
-echo "│  Orgs: ${ORGS}"
-echo "└─────────────────────────────────────────────┘"
+echo "╭${BORDER}╮"
+printf "│%78s│\n" ""
+TITLE="Project Sardaukar v${VERSION}"
+TITLE_PAD=$((75 - ${#TITLE} - ${#REPO_URL} - 1))
+if [ $TITLE_PAD -lt 1 ]; then
+    sardaukar_line "$TITLE"
+else
+    printf "│   %s%${TITLE_PAD}s%s │\n" "$TITLE" "" "$REPO_URL"
+fi
+printf "│%78s│\n" ""
+echo "├${BORDER}┤"
+printf "│%78s│\n" ""
+sardaukar_line "$INFO1"
+sardaukar_line "$INFO2"
+sardaukar_line "$INFO3"
+sardaukar_line "$INFO4"
+printf "│%78s│\n" ""
+sardaukar_line "$INFO5"
+printf "│%78s│\n" ""
+echo "╰${BORDER}╯"
 echo ""
 
 # Parse flags
