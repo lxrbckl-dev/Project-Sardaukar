@@ -229,27 +229,28 @@ When the `SKIP_QA` environment variable is set to `1` (via `./deploy.sh --skip-q
 
 ## Embedded Mode
 
-When the `SARDAUKAR_EMBEDDED` environment variable is set to `1` (via `./deploy.sh --embedded`), TPM changes how it handles work targeting the spawning repo:
+When the `SARDAUKAR_EMBEDDED` environment variable is set to `1` (via `./deploy.sh --embedded`), TPM suspends issue creation and board management for the **entire session** — regardless of which repo the work targets:
 
-- **Default target = spawning repo.** The repo path is captured in `SARDAUKAR_EMBEDDED_REPO` at deploy time. If that variable is unset, fall back to CWD. When the user asks to "fix" something, "add a feature," or similar without naming a specific org/repo, the spawning repo is the implicit target.
-- **No issue creation for spawning-repo work.** Do not create GitHub issues for work targeting the spawning repo. Branch + PR only — this is the "no tickets for self-work" pattern.
-- **No kanban updates for spawning-repo work.** Do not move or create kanban board cards for work targeting the spawning repo. Skip board management entirely for those tasks.
-- **SWE branches still follow the naming convention.** `fix/swe-<N>/...` or `feat/swe-<N>/...` — mandatory regardless of mode.
-- **SWE works in the spawning repo directly.** Do not clone to `/tmp`. Assign the SWE to work in `SARDAUKAR_EMBEDDED_REPO` in place. Include this instruction explicitly in the SWE spawn prompt.
+- **No issue creation.** Do not call `gh issue create` for any repo, regardless of managed-org membership. Bug reports and observations are surfaced to the operator in chat only.
+- **No kanban writes.** Do not add cards to per-org boards, do not move cards between columns, and do not run lazy column discovery. Board management is fully suspended for the session.
+- **Branches + PRs remain the unit of work.** SWE agents still open PRs on real branches (`fix/swe-<N>/...` / `feat/swe-<N>/...`) — embedded mode suppresses tickets and board churn, not version control.
+- **Default target = spawning repo.** The repo path is captured in `SARDAUKAR_EMBEDDED_REPO` at deploy time. If that variable is unset, fall back to CWD. When the user asks to "fix" something, "add a feature," or similar without naming a specific org/repo, the spawning repo is the implicit target. This is a routing hint — it does not gate the ticket/board suppression (that is session-wide).
+- **Workspace isolation is preserved.** When the target repo is NOT the spawning repo, the SWE still clones to its own temp dir as normal. Embedded mode suppresses ceremony, not isolation.
 - **QA still runs unless `SKIP_QA=1` is also active.** Embedded mode does not affect the QA pipeline. If you want both — no tickets AND no QA round-trip — combine `--embedded --skip-qa`.
-- **Managed-org work is unaffected.** If the user explicitly names a managed org (e.g., "fix issue #5 in t5-labs/repo-a"), that request follows the normal ticketed flow — `--embedded` sets the *default* target, it does not forbid managed-org work.
+- **Human PRs remain sacred.** Never auto-merged, regardless of mode.
+- **SITMAP read-only rule is unchanged.** The narrow new-repo-backfill exception still applies under `--embedded` (but will rarely trigger, since the write path is suppressed).
 
-**Spawn-prompt requirement:** when spawning an SWE for work in embedded mode, include in the assignment:
+**Spawn-prompt requirement:** when spawning an SWE for code work in embedded mode, include in the assignment:
 
-> `SARDAUKAR_EMBEDDED=1 — work directly in ${SARDAUKAR_EMBEDDED_REPO} (do NOT clone to /tmp). No kanban cards, no GitHub issues for this work.`
+> `SARDAUKAR_EMBEDDED=1 — no kanban cards, no GitHub issues for this session. If the target repo is the spawning repo (${SARDAUKAR_EMBEDDED_REPO}), work directly in place (do NOT clone to /tmp). For any other repo, clone to /tmp as normal.`
 
-Without that explicit instruction, the SWE defaults to the clone-to-tmp workflow.
+Without that explicit instruction, the SWE defaults to the clone-to-tmp workflow and may not know tickets are suppressed.
 
 **Reporting at startup:** Include embedded mode status in your greeting alongside other env vars. Example:
 
-> Embedded mode: ACTIVE — default target is `/Users/highlander/lxrbckl-dev/Project-Sardaukar`
+> Embedded mode: ACTIVE — no tickets or board writes this session. Default target: `/Users/highlander/lxrbckl-dev/Project-Sardaukar`
 
-**Why this exists:** When Sardaukar itself (or any repo it was spawned from) needs self-improvement work, creating tickets and moving kanban cards is overhead that adds noise to the managed-org boards. Embedded mode is a deliberate user opt-in to skip that ceremony and get faster, quieter turnaround — parallel in spirit to `--skip-qa`. Managed-org work and the `--skip-qa` flag are fully orthogonal to it.
+**Why this exists:** `--embedded` is a no-ceremony session flag. Whether you're doing self-improvement work on Sardaukar or quickly fixing something in a managed-org repo, you shouldn't have to wade through ticket creation and kanban card churn for every routine task. The suppression is session-wide by design — scoping it to a single repo defeats the purpose. `--skip-qa` is fully orthogonal and stacks freely.
 
 ## Web-Capable Subagents
 

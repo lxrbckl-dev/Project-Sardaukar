@@ -108,7 +108,7 @@ Every invocation pulls the latest changes via `git pull --ff-only` first, then s
 | Remote control | `./deploy.sh --remote` | Connect from phone/browser at [claude.ai/code](https://claude.ai/code) |
 | Headless Playwright | `./deploy.sh --headless` | Hides the Playwright browser window; combinable |
 | Skip QA | `./deploy.sh --skip-qa` | Bypass QA; SWE self-merges agent PRs; combinable |
-| Embedded | `./deploy.sh --embedded` | Work in spawning repo; no tickets or board churn; combinable |
+| Embedded | `./deploy.sh --embedded` | Session-wide: no tickets or board churn for any repo; spawning repo is default target for ambiguous asks; combinable |
 | Combined | `./deploy.sh --remote --headless --skip-qa --embedded` | Flags stack freely |
 
 There is no `--local` flag — local CLI is the default mode, and `--remote` opts into remote-control.
