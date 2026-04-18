@@ -6,7 +6,7 @@
 
 **PLAN MODE WARNING:** If the session enters plan mode, do NOT spawn subagents or execute any actions until the user exits plan mode. Plan mode is for discussion and planning only — no tool calls, no subagent deployments, no `gh` commands. Wait for the user to approve the plan and exit plan mode before proceeding.
 
-**Deploying via CLI:** If the user asks you to "deploy", "start TPM", "start the team", "run the session", or similar from a regular Claude Code CLI session, run `./deploy.sh` in the background via Bash with `run_in_background: true`. By default this launches a plain `claude` CLI session (local mode). If the user wants the session reachable from their phone or the web, pass `--remote` (`./deploy.sh --remote`) to launch `claude remote-control` with the version-tagged session name. Use `TaskStop` to kill it when the user asks you to stop.
+**Deploying via CLI:** If the user asks you to "deploy", "start TPM", "start the team", "run the session", or similar from a regular Claude Code CLI session, run `./deploy.sh` in the background via Bash with `run_in_background: true`. By default this launches a plain `claude` CLI session (local mode). If the user wants the session reachable from their phone or the web, pass `--remote` (`./deploy.sh --remote`) to launch `claude remote-control` with the version-tagged session name. `--headless` runs Playwright without a visible browser window. `--skip-qa` is a combinable flag that exports `SKIP_QA=1` and bypasses the QA gatekeeper — TPM instructs the authoring SWE to self-merge its own agent PR after green tests instead of spawning QA; human PRs are still never auto-merged. All flags stack freely (e.g. `./deploy.sh --remote --headless --skip-qa`). Use `TaskStop` to kill it when the user asks you to stop.
 
 ## What This Is
 
@@ -111,6 +111,15 @@ TPM receives work (human command)
         → TPM spawns QA subagent to review
           → QA reviews, merges (agent PR) or comments (human PR), returns result
             → TPM updates kanban board
+```
+
+Under `SKIP_QA=1` (deploy with `--skip-qa`), the QA stage is skipped for agent PRs:
+```
+TPM receives work (human command, SKIP_QA=1 active)
+  → Spawns SWE subagent WITH "SKIP_QA=1 active — self-merge after green tests" instruction
+    → SWE does work, opens PR, runs tests, self-merges via `gh pr merge --merge`
+      → TPM moves kanban card directly: In progress → Done (no In review stage)
+      → Human PRs: still never auto-merged, no QA either under SKIP_QA — reported to user
 ```
 
 For QA requesting changes:
@@ -274,7 +283,7 @@ These are non-negotiable and must be enforced in all agent definitions:
 1. **NO DELETIONS** — cannot delete repos, branches, issues, PRs, board items, or anything else. Close/archive only.
 2. **NO REPO SETTINGS CHANGES** — cannot modify branch protection, enable/disable Dependabot, etc. Can request a human to do so.
 3. **NO CREATING NEW REPOS** — monitor and maintain existing repos only.
-4. **PR MERGE RULES** — agent PRs (branch matches `fix/swe-<N>/...` or `feat/swe-<N>/...`) → QA can merge. Human PRs → QA reviews but does NOT merge.
+4. **PR MERGE RULES** — agent PRs (branch matches `fix/swe-<N>/...` or `feat/swe-<N>/...`) → QA can merge. Human PRs → QA reviews but does NOT merge. Exception: under the `SKIP_QA=1` deploy flag, the authoring SWE self-merges its own agent PR directly (after green tests and only if the PR is not a draft), skipping QA entirely. Human PRs are never auto-merged under any flag.
 5. **SINGLE GITHUB ACCOUNT** — all agents share the host user's `gh` auth. Differentiated by naming conventions in branches, PR titles, and log entries.
 6. **ORG CONFIG IS THE SOURCE OF TRUTH** — never hardcode org names. Always read from `organizations.yml`.
 7. **NEVER LOG CREDENTIALS** — never write usernames, passwords, API keys, tokens, or secrets to log files, issue bodies, PR descriptions, or any output.
@@ -295,3 +304,4 @@ These are non-negotiable and must be enforced in all agent definitions:
 | Portfolio tracking | SITMAP board at `lxrbckl-dev/projects/2`, separate from per-org boards | High-level "what am I working on" view across all repos, decoupled from issue/PR detail |
 | Board cleanup | Auto-archive Done items after 7 days | Keeps board clean, archived items still searchable |
 | Web tools | WebSearch + WebFetch + Playwright + native image reading | Full web capability suite for all agents |
+| QA bypass | `--skip-qa` flag on deploy | Skip the QA round-trip for trivial work; SWE self-merges its own agent PR |

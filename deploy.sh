@@ -6,7 +6,8 @@
 #   ./deploy.sh                  → local CLI mode (interactive terminal)
 #   ./deploy.sh --remote         → remote-control mode (connect via claude.ai/code)
 #   ./deploy.sh --headless       → local CLI + headless Playwright
-#   ./deploy.sh --remote --headless → remote-control + headless Playwright
+#   ./deploy.sh --skip-qa        → bypass QA; SWE self-merges agent PRs after green tests
+#   ./deploy.sh --remote --headless --skip-qa → flags stack freely
 
 set -e
 
@@ -36,10 +37,26 @@ SESSION_NAME="Sardaukar TPM v${VERSION}"
 # Display team configuration
 ORGS=$(grep 'name:' .claude/config/organizations.yml 2>/dev/null | sed 's/.*name: //' | tr '\n' ', ' | sed 's/,[ ]*$//')
 
+# Parse flags early so the banner can reflect mode (e.g. QA disabled)
+REMOTE_MODE=false
+HEADLESS_MODE=false
+SKIP_QA_MODE=false
+for arg in "$@"; do
+    case "$arg" in
+        --remote) REMOTE_MODE=true ;;
+        --headless) HEADLESS_MODE=true ;;
+        --skip-qa) SKIP_QA_MODE=true ;;
+    esac
+done
+
 INFO1="TPM (orchestrator)           ${TPM_COUNT} session"
 INFO2="SWE (performance/Opus)       ${SWE_PERFORMANCE_CORES} cores"
 INFO3="SWE (efficiency/Sonnet)      ${SWE_EFFICIENCY_CORES} core"
-INFO4="QA  (gatekeeper)             ${QA_AGENT_COUNT} agent"
+if [ "$SKIP_QA_MODE" = true ]; then
+    INFO4="QA  (gatekeeper)             disabled (--skip-qa)"
+else
+    INFO4="QA  (gatekeeper)             ${QA_AGENT_COUNT} agent"
+fi
 INFO5="Orgs: ${ORGS}"
 
 # Print a padded line inside the box
@@ -77,20 +94,16 @@ printf "│%78s│\n" ""
 echo "╰${BORDER}╯"
 echo ""
 
-# Parse flags
-REMOTE_MODE=false
-HEADLESS_MODE=false
-for arg in "$@"; do
-    case "$arg" in
-        --remote) REMOTE_MODE=true ;;
-        --headless) HEADLESS_MODE=true ;;
-    esac
-done
-
 # Set Playwright to headless if flagged
 if [ "$HEADLESS_MODE" = true ]; then
     export PLAYWRIGHT_HEADLESS=1
     echo "[deploy] Playwright: headless mode (no browser window)"
+fi
+
+# Export SKIP_QA if flagged — TPM reads this at startup to decide whether to spawn QA subagents
+if [ "$SKIP_QA_MODE" = true ]; then
+    export SKIP_QA=1
+    echo "[deploy] QA bypass enabled — SWE will self-merge agent PRs"
 fi
 
 if [ "$REMOTE_MODE" = true ]; then
