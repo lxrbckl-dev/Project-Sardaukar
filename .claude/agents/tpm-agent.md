@@ -275,7 +275,59 @@ The boards use these columns:
   - PR opened for review → **In review**
   - QA approved and merged → **Done**
 
-### 4. Auto-Archive Done Items
+### 4. SITMAP Board (Portfolio View)
+
+There is a **separate, portfolio-altitude** board called **SITMAP** that exists alongside the per-org boards:
+
+| | |
+|---|---|
+| **Board URL** | https://github.com/orgs/lxrbckl-dev/projects/2 |
+| **Title on GitHub** | "SITMAP" (Alex refers to it by this name in conversation) |
+| **Project ID** | `PVT_kwDODj1ats4BU9RT` |
+| **Project number** | `2` (owner: `lxrbckl-dev`) |
+| **Purpose** | One card per **repository in `lxrbckl-dev`** — high-level project status, not issue/PR detail |
+| **Scope** | **lxrbckl-dev only.** `.github` is excluded. Other orgs (e.g. t5-labs) do NOT appear here |
+
+**Critical rule — do not conflate:**
+- **SITMAP** (`lxrbckl-dev/projects/2`) tracks whole projects (one card per repo).
+- **Per-org boards** (`organizations.yml`) track issues and PRs within that org.
+- Issues/PRs never go on SITMAP. Project cards never go on per-org boards.
+
+**Column semantics on SITMAP:**
+
+| Column | Meaning |
+|--------|---------|
+| **Backlog** / **Done** | Project isn't being actively worked on — Backlog if the latest iteration hasn't shipped/closed, Done if it has |
+| **In progress** | Alex is actively working on this project right now (recent commits, current focus) |
+| **Ready** / **In review** | Less common at portfolio altitude — use only if they fit the project's lifecycle |
+
+**How Alex drives it:**
+- He'll say things like "Move Project-PasCam to In progress, we're working on it." Just do the move.
+- Every lxrbckl-dev repo (except `.github`) belongs on SITMAP. When a new repo appears in the org, add it in Backlog by default and mention to Alex that it's been added; if there's clear signal of active work, ask him which column before placing.
+
+**Card conventions:**
+- **Title:** `<repo-name> | V<n>` when the repo description contains a `V\d+` token (e.g. `Project-Sardaukar | V1`); otherwise just `<repo-name>`. No emoji prefix.
+- **Body:**
+  ```
+  <repo description>
+
+  **Commits:** N
+  **Topics:** `topic1`, `topic2`, ...
+
+  https://github.com/lxrbckl-dev/<repo>
+  ```
+  Commit count from GraphQL `defaultBranchRef.target.history.totalCount`. Topics from `repositoryTopics`.
+- **Custom badge fields on the board:**
+  - **Year** (2019–2026) — parsed from the "(Season) YEAR" tag in the description
+  - **Version** (V1–V8) — parsed from the `V\d+` token
+  - **Flag** (Discontinued | Proof of Concept) — parsed from description keywords
+  - **Language** (TypeScript | Python | JavaScript | Shell | Dart | Other) — from GitHub's `primaryLanguage`
+
+**Cards as real issues:** Cards on SITMAP may be either draft items (show a "Draft" label) or real GitHub issues of type **Project** (converted drafts, no Draft label). The conversion targets each card's matching repo. Creating the "Project" issue type requires the `admin:org` scope on `gh` auth.
+
+When enriching cards after the repo list changes, re-run the population pass so badges/bodies stay fresh.
+
+### 5. Auto-Archive Done Items
 
 To keep the board clean, archive cards that have been in **Done** for more than 7 days.
 
@@ -284,14 +336,14 @@ To keep the board clean, archive cards that have been in **Done** for more than 
 - Archived items are NOT deleted — they remain searchable in the project via the `is:archived` filter, and the underlying issues/PRs are untouched on GitHub
 - Log each archive action
 
-### 5. Issue Creation
+### 6. Issue Creation
 
 You can create new issues when appropriate:
 - Suggest dependency upgrades
 - Flag patterns you notice across repos
 - When the human asks you to
 
-### 6. Status Reports
+### 7. Status Reports
 
 When the user connects or asks for status:
 
