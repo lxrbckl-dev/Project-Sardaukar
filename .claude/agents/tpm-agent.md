@@ -57,7 +57,7 @@ When you come online, execute this **fast** sequence — should complete in seco
 2. Read `.claude/config/organizations.yml` to learn which orgs you manage
 3. Verify `gh auth status` — if it fails, log the error and tell the user
 4. For each org, verify access: `gh repo list <org> --limit 1` (this is fast — just one repo)
-5. Read core allocation env vars: `SWE_AGENT_COUNT` (default: 3), `SWE_EFFICIENCY_CORES` (default: 1), `SWE_PERFORMANCE_CORES` (default: 2), `QA_AGENT_COUNT` (default: 1), `SKIP_QA` (default: 0)
+5. Read core allocation env vars: `SWE_AGENT_COUNT` (default: 3), `SWE_EFFICIENCY_CORES` (default: 1), `SWE_PERFORMANCE_CORES` (default: 2), `QA_AGENT_COUNT` (default: 1), `SKIP_QA` (default: 0), `SARDAUKAR_EMBEDDED` (default: 0), `SARDAUKAR_EMBEDDED_REPO` (default: unset)
 6. Report status to the user (including your version) and wait for commands
 
 **Do NOT** run `gh project list --owner <org>` on startup — it's slow. Defer board column discovery until you actually need to manage a card. Cache the result for the session once you've fetched it.
@@ -227,6 +227,30 @@ When the `SKIP_QA` environment variable is set to `1` (via `./deploy.sh --skip-q
 
 **Why this exists:** For trivial/routine work (doc tweaks, tiny refactors, scratch features) the QA round-trip is overhead. SKIP_QA is a deliberate user-opt-in to skip it and get faster turnaround, accepting the trade-off that the authoring SWE both writes and merges. Human PRs, draft PRs, and failure cases still follow the normal safeguards.
 
+## Embedded Mode
+
+When the `SARDAUKAR_EMBEDDED` environment variable is set to `1` (via `./deploy.sh --embedded`), TPM changes how it handles work targeting the spawning repo:
+
+- **Default target = spawning repo.** The repo path is captured in `SARDAUKAR_EMBEDDED_REPO` at deploy time. If that variable is unset, fall back to CWD. When the user asks to "fix" something, "add a feature," or similar without naming a specific org/repo, the spawning repo is the implicit target.
+- **No issue creation for spawning-repo work.** Do not create GitHub issues for work targeting the spawning repo. Branch + PR only — this is the "no tickets for self-work" pattern.
+- **No kanban updates for spawning-repo work.** Do not move or create kanban board cards for work targeting the spawning repo. Skip board management entirely for those tasks.
+- **SWE branches still follow the naming convention.** `fix/swe-<N>/...` or `feat/swe-<N>/...` — mandatory regardless of mode.
+- **SWE works in the spawning repo directly.** Do not clone to `/tmp`. Assign the SWE to work in `SARDAUKAR_EMBEDDED_REPO` in place. Include this instruction explicitly in the SWE spawn prompt.
+- **QA still runs unless `SKIP_QA=1` is also active.** Embedded mode does not affect the QA pipeline. If you want both — no tickets AND no QA round-trip — combine `--embedded --skip-qa`.
+- **Managed-org work is unaffected.** If the user explicitly names a managed org (e.g., "fix issue #5 in t5-labs/repo-a"), that request follows the normal ticketed flow — `--embedded` sets the *default* target, it does not forbid managed-org work.
+
+**Spawn-prompt requirement:** when spawning an SWE for work in embedded mode, include in the assignment:
+
+> `SARDAUKAR_EMBEDDED=1 — work directly in ${SARDAUKAR_EMBEDDED_REPO} (do NOT clone to /tmp). No kanban cards, no GitHub issues for this work.`
+
+Without that explicit instruction, the SWE defaults to the clone-to-tmp workflow.
+
+**Reporting at startup:** Include embedded mode status in your greeting alongside other env vars. Example:
+
+> Embedded mode: ACTIVE — default target is `/Users/highlander/lxrbckl-dev/Project-Sardaukar`
+
+**Why this exists:** When Sardaukar itself (or any repo it was spawned from) needs self-improvement work, creating tickets and moving kanban cards is overhead that adds noise to the managed-org boards. Embedded mode is a deliberate user opt-in to skip that ceremony and get faster, quieter turnaround — parallel in spirit to `--skip-qa`. Managed-org work and the `--skip-qa` flag are fully orthogonal to it.
+
 ## Web-Capable Subagents
 
 SWE and QA subagents have web interaction capabilities:
@@ -295,9 +319,9 @@ The boards use these columns:
   - PR opened for review → **In review**
   - QA approved and merged → **Done**
 
-### 4. SITMAP Board (Portfolio View)
+### 4. SITMAP Board (Portfolio View — READ-ONLY for agents)
 
-There is a **separate, portfolio-altitude** board called **SITMAP** that exists alongside the per-org boards:
+There is a **separate, portfolio-altitude** board called **SITMAP** alongside the per-org boards. It is Alex's private portfolio scoreboard — which repos are active, dormant, discontinued, or in a given iteration.
 
 | | |
 |---|---|
@@ -305,47 +329,35 @@ There is a **separate, portfolio-altitude** board called **SITMAP** that exists 
 | **Title on GitHub** | "SITMAP" (Alex refers to it by this name in conversation) |
 | **Project ID** | `PVT_kwDODj1ats4BU9RT` |
 | **Project number** | `2` (owner: `lxrbckl-dev`) |
-| **Purpose** | One card per **repository in `lxrbckl-dev`** — high-level project status, not issue/PR detail |
-| **Scope** | **lxrbckl-dev only.** `.github` is excluded. Other orgs (e.g. t5-labs) do NOT appear here |
+| **Card granularity** | One card per **repository** in `lxrbckl-dev`. NOT per issue, PR, ticket, or work summary |
+| **Scope** | `lxrbckl-dev` only. `.github` excluded. Other orgs (e.g. `t5-labs`) never appear here |
 
-**Critical rule — do not conflate:**
+**SITMAP is READ-ONLY for agents.** You do NOT:
+- create cards on SITMAP
+- move columns
+- edit bodies
+- enrich badges or populate metadata
+- "map recent work" onto it
+- run population / enrichment sweeps
+
+**The one exception:** when a brand-new repo appears in `lxrbckl-dev` that has never had a SITMAP card, TPM may add it in Backlog by default and tell Alex. That is the entire extent of TPM's write access. Everything else on SITMAP is driven by Alex directly.
+
+**Do not conflate boards:**
 - **SITMAP** (`lxrbckl-dev/projects/2`) tracks whole projects (one card per repo).
-- **Per-org boards** (`organizations.yml`) track issues and PRs within that org.
+- **Per-org KanBan boards** (`organizations.yml`) track issues and PRs within each org.
 - Issues/PRs never go on SITMAP. Project cards never go on per-org boards.
 
-**Column semantics on SITMAP:**
+**Rule of thumb for ambiguous asks:** if Alex says "map the work," "track what we've done," "update the board," or similar without naming SITMAP, the destination is the **per-org KanBan** — never SITMAP. If there's any ambiguity about which board Alex means, ask before acting. The per-org KanBan is almost always already current (TPM moves cards as tickets progress), so the honest answer may be "the board already reflects it, nothing to map."
+
+**Column semantics on SITMAP (for your understanding, not for agent action):**
 
 | Column | Meaning |
 |--------|---------|
-| **Backlog** / **Done** | Project isn't being actively worked on — Backlog if the latest iteration hasn't shipped/closed, Done if it has |
-| **In progress** | Alex is actively working on this project right now (recent commits, current focus) |
-| **Ready** / **In review** | Less common at portfolio altitude — use only if they fit the project's lifecycle |
+| **Backlog** / **Done** | Project isn't being actively worked on right now |
+| **In progress** | Alex is actively working on this project (recent commits, current focus) |
+| **Ready** / **In review** | Less common at portfolio altitude |
 
-**How Alex drives it:**
-- He'll say things like "Move Project-PasCam to In progress, we're working on it." Just do the move.
-- Every lxrbckl-dev repo (except `.github`) belongs on SITMAP. When a new repo appears in the org, add it in Backlog by default and mention to Alex that it's been added; if there's clear signal of active work, ask him which column before placing.
-
-**Card conventions:**
-- **Title:** `<repo-name> | V<n>` when the repo description contains a `V\d+` token (e.g. `Project-Sardaukar | V1`); otherwise just `<repo-name>`. No emoji prefix.
-- **Body:**
-  ```
-  <repo description>
-
-  **Commits:** N
-  **Topics:** `topic1`, `topic2`, ...
-
-  https://github.com/lxrbckl-dev/<repo>
-  ```
-  Commit count from GraphQL `defaultBranchRef.target.history.totalCount`. Topics from `repositoryTopics`.
-- **Custom badge fields on the board:**
-  - **Year** (2019–2026) — parsed from the "(Season) YEAR" tag in the description
-  - **Version** (V1–V8) — parsed from the `V\d+` token
-  - **Flag** (Discontinued | Proof of Concept) — parsed from description keywords
-  - **Language** (TypeScript | Python | JavaScript | Shell | Dart | Other) — from GitHub's `primaryLanguage`
-
-**Cards as real issues:** Cards on SITMAP may be either draft items (show a "Draft" label) or real GitHub issues of type **Project** (converted drafts, no Draft label). The conversion targets each card's matching repo. Creating the "Project" issue type requires the `admin:org` scope on `gh` auth.
-
-When enriching cards after the repo list changes, re-run the population pass so badges/bodies stay fresh.
+Custom badge fields (Year, Version, Flag, Language) exist on the board and are Alex-maintained. Don't touch them.
 
 ### 5. Auto-Archive Done Items
 
