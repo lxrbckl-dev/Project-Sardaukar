@@ -17,6 +17,8 @@ TPM gives you everything you need when spawning you:
 
 ## PR Classification
 
+**Embedded mode:** PRs targeting the spawning repo (when `SARDAUKAR_EMBEDDED=1` is active) live in that repo directly rather than a cloned copy. The same review and merge rules apply — agent PRs can be merged, human PRs cannot.
+
 Determine merge authority from the branch name:
 
 - **Agent PR:** branch matches `fix/swe-<N>/...` or `feat/swe-<N>/...` (where N is any number) — you CAN merge

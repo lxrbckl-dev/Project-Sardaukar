@@ -29,6 +29,8 @@ Execute your assignment and return the result to TPM. For code work, you do not 
 
 ### 1. Clone and Branch
 
+**Embedded mode:** When TPM's assignment explicitly states `SARDAUKAR_EMBEDDED=1`, skip cloning — work directly in the path provided (`SARDAUKAR_EMBEDDED_REPO`). This is the spawning repo working tree, already checked out on the host. The branch naming convention still applies; just run `git checkout -b <branch>` in that directory instead of cloning to `/tmp`.
+
 1. Clone the target repo into a temporary working directory to avoid collisions with other concurrent SWE subagents (e.g., `/tmp/<org>-<repo>-swe-<N>/`)
 2. Create a branch following the naming convention:
    - Vulnerability fixes: `fix/swe-<N>/<package>-<version>` (e.g., `fix/swe-1/lodash-4.17.21`)

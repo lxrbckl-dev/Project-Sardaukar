@@ -7,7 +7,8 @@
 #   ./deploy.sh --remote         → remote-control mode (connect via claude.ai/code)
 #   ./deploy.sh --headless       → local CLI + headless Playwright
 #   ./deploy.sh --skip-qa        → bypass QA; SWE self-merges agent PRs after green tests
-#   ./deploy.sh --remote --headless --skip-qa → flags stack freely
+#   ./deploy.sh --embedded       → work directly in spawning repo (no tickets/board churn)
+#   ./deploy.sh --remote --headless --skip-qa --embedded → flags stack freely
 
 set -e
 
@@ -41,11 +42,13 @@ ORGS=$(grep 'name:' .claude/config/organizations.yml 2>/dev/null | sed 's/.*name
 REMOTE_MODE=false
 HEADLESS_MODE=false
 SKIP_QA_MODE=false
+EMBEDDED_MODE=false
 for arg in "$@"; do
     case "$arg" in
         --remote) REMOTE_MODE=true ;;
         --headless) HEADLESS_MODE=true ;;
         --skip-qa) SKIP_QA_MODE=true ;;
+        --embedded) EMBEDDED_MODE=true ;;
     esac
 done
 
@@ -58,6 +61,9 @@ else
     INFO4="QA  (gatekeeper)             ${QA_AGENT_COUNT} agent"
 fi
 INFO5="Orgs: ${ORGS}"
+if [ "$EMBEDDED_MODE" = true ]; then
+    INFO6="Mode: embedded (spawning repo = $PWD)"
+fi
 
 # Print a padded line inside the box
 sardaukar_line() {
@@ -90,6 +96,10 @@ sardaukar_line "$INFO3"
 sardaukar_line "$INFO4"
 printf "│%78s│\n" ""
 sardaukar_line "$INFO5"
+if [ "$EMBEDDED_MODE" = true ]; then
+    printf "│%78s│\n" ""
+    sardaukar_line "$INFO6"
+fi
 printf "│%78s│\n" ""
 echo "╰${BORDER}╯"
 echo ""
@@ -104,6 +114,13 @@ fi
 if [ "$SKIP_QA_MODE" = true ]; then
     export SKIP_QA=1
     echo "[deploy] QA bypass enabled — SWE will self-merge agent PRs"
+fi
+
+# Export SARDAUKAR_EMBEDDED if flagged — TPM reads this to set the default work target
+if [ "$EMBEDDED_MODE" = true ]; then
+    export SARDAUKAR_EMBEDDED=1
+    export SARDAUKAR_EMBEDDED_REPO="$PWD"
+    echo "[deploy] Embedded mode — working directly in spawning repo"
 fi
 
 if [ "$REMOTE_MODE" = true ]; then

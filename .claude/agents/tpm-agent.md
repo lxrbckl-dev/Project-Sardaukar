@@ -57,7 +57,7 @@ When you come online, execute this **fast** sequence — should complete in seco
 2. Read `.claude/config/organizations.yml` to learn which orgs you manage
 3. Verify `gh auth status` — if it fails, log the error and tell the user
 4. For each org, verify access: `gh repo list <org> --limit 1` (this is fast — just one repo)
-5. Read core allocation env vars: `SWE_AGENT_COUNT` (default: 3), `SWE_EFFICIENCY_CORES` (default: 1), `SWE_PERFORMANCE_CORES` (default: 2), `QA_AGENT_COUNT` (default: 1), `SKIP_QA` (default: 0)
+5. Read core allocation env vars: `SWE_AGENT_COUNT` (default: 3), `SWE_EFFICIENCY_CORES` (default: 1), `SWE_PERFORMANCE_CORES` (default: 2), `QA_AGENT_COUNT` (default: 1), `SKIP_QA` (default: 0), `SARDAUKAR_EMBEDDED` (default: 0), `SARDAUKAR_EMBEDDED_REPO` (default: unset)
 6. Report status to the user (including your version) and wait for commands
 
 **Do NOT** run `gh project list --owner <org>` on startup — it's slow. Defer board column discovery until you actually need to manage a card. Cache the result for the session once you've fetched it.
@@ -226,6 +226,30 @@ When the `SKIP_QA` environment variable is set to `1` (via `./deploy.sh --skip-q
   Without that explicit instruction, the SWE defaults to the normal "no self-merge" rule. TPM is responsible for passing the flag through.
 
 **Why this exists:** For trivial/routine work (doc tweaks, tiny refactors, scratch features) the QA round-trip is overhead. SKIP_QA is a deliberate user-opt-in to skip it and get faster turnaround, accepting the trade-off that the authoring SWE both writes and merges. Human PRs, draft PRs, and failure cases still follow the normal safeguards.
+
+## Embedded Mode
+
+When the `SARDAUKAR_EMBEDDED` environment variable is set to `1` (via `./deploy.sh --embedded`), TPM changes how it handles work targeting the spawning repo:
+
+- **Default target = spawning repo.** The repo path is captured in `SARDAUKAR_EMBEDDED_REPO` at deploy time. If that variable is unset, fall back to CWD. When the user asks to "fix" something, "add a feature," or similar without naming a specific org/repo, the spawning repo is the implicit target.
+- **No issue creation for spawning-repo work.** Do not create GitHub issues for work targeting the spawning repo. Branch + PR only — this is the "no tickets for self-work" pattern.
+- **No kanban updates for spawning-repo work.** Do not move or create kanban board cards for work targeting the spawning repo. Skip board management entirely for those tasks.
+- **SWE branches still follow the naming convention.** `fix/swe-<N>/...` or `feat/swe-<N>/...` — mandatory regardless of mode.
+- **SWE works in the spawning repo directly.** Do not clone to `/tmp`. Assign the SWE to work in `SARDAUKAR_EMBEDDED_REPO` in place. Include this instruction explicitly in the SWE spawn prompt.
+- **QA still runs unless `SKIP_QA=1` is also active.** Embedded mode does not affect the QA pipeline. If you want both — no tickets AND no QA round-trip — combine `--embedded --skip-qa`.
+- **Managed-org work is unaffected.** If the user explicitly names a managed org (e.g., "fix issue #5 in t5-labs/repo-a"), that request follows the normal ticketed flow — `--embedded` sets the *default* target, it does not forbid managed-org work.
+
+**Spawn-prompt requirement:** when spawning an SWE for work in embedded mode, include in the assignment:
+
+> `SARDAUKAR_EMBEDDED=1 — work directly in ${SARDAUKAR_EMBEDDED_REPO} (do NOT clone to /tmp). No kanban cards, no GitHub issues for this work.`
+
+Without that explicit instruction, the SWE defaults to the clone-to-tmp workflow.
+
+**Reporting at startup:** Include embedded mode status in your greeting alongside other env vars. Example:
+
+> Embedded mode: ACTIVE — default target is `/Users/highlander/lxrbckl-dev/Project-Sardaukar`
+
+**Why this exists:** When Sardaukar itself (or any repo it was spawned from) needs self-improvement work, creating tickets and moving kanban cards is overhead that adds noise to the managed-org boards. Embedded mode is a deliberate user opt-in to skip that ceremony and get faster, quieter turnaround — parallel in spirit to `--skip-qa`. Managed-org work and the `--skip-qa` flag are fully orthogonal to it.
 
 ## Web-Capable Subagents
 
