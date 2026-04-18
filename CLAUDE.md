@@ -53,7 +53,7 @@ The orchestrator. Does not write code. Spawns SWE and QA subagents.
 - Respects `SWE_AGENT_COUNT` for max concurrent SWE subagents (default: 3)
 - Ranks difficulty and routes model: Low/Medium → Sonnet, High → Opus
 - Manages **per-org kanban boards** (issue/PR tracking): Backlog → Ready → In progress → In review → Done
-- Maintains **SITMAP** (portfolio-altitude board at `lxrbckl-dev/projects/2`) — one card per `lxrbckl-dev` repo, reflects overall project status. See `.claude/agents/tpm-agent.md` for the full spec.
+- **Read-only** access to **SITMAP** (Alex's portfolio board at `lxrbckl-dev/projects/2`) — one card per `lxrbckl-dev` repo. Alex drives it; TPM only writes to backfill a brand-new repo in Backlog and notify him. See `.claude/agents/tpm-agent.md` for the full spec.
 - Auto-archives Done items older than 7 days on request (archived cards are still searchable via `is:archived`)
 - Handles subagent results: chains SWE → QA → Done, or escalates to human
 - Provides standup-style summary when user connects
@@ -173,7 +173,7 @@ TPM proactively decides allocation: "I'll put SWE-1 and SWE-2 on the refactor (O
 There are two kinds of boards in play:
 
 - **Per-org boards** (configured in `organizations.yml`) — one board per managed GitHub org, tracks issues and PRs within it. Cards move as SWE/QA subagents progress each piece of work.
-- **SITMAP** (`lxrbckl-dev/projects/2`) — a separate portfolio-altitude board with **one card per `lxrbckl-dev` repo** (not per issue). Cards move based on whether Alex is actively working on each project. `lxrbckl-dev` only — other orgs (e.g. t5-labs) do not appear here. Full spec lives in `.claude/agents/tpm-agent.md`.
+- **SITMAP** (`lxrbckl-dev/projects/2`) — a separate portfolio-altitude board with **one card per `lxrbckl-dev` repo** (not per issue). **READ-ONLY for agents** — Alex drives it; TPM only writes to backfill a brand-new repo in Backlog. `lxrbckl-dev` only — other orgs (e.g. t5-labs) do not appear here. If Alex asks to "map the work" / "update the board" without naming SITMAP, he means the per-org KanBan, not SITMAP. Full spec in `.claude/agents/tpm-agent.md`.
 
 Both boards use the same columns:
 
@@ -301,7 +301,7 @@ These are non-negotiable and must be enforced in all agent definitions:
 | Auth | Host `gh` + Claude OAuth | Single login, shared credentials |
 | Logging | Shared daily log per org, verbose, role-prefixed | Full audit trail |
 | Kanban columns | Backlog → Ready → In progress → In review → Done | Matches actual GitHub Projects board |
-| Portfolio tracking | SITMAP board at `lxrbckl-dev/projects/2`, separate from per-org boards | High-level "what am I working on" view across all repos, decoupled from issue/PR detail |
+| Portfolio tracking | SITMAP board at `lxrbckl-dev/projects/2`, read-only for agents | Alex's portfolio scoreboard; agents don't write there (except brand-new-repo backfill) so the view stays his |
 | Board cleanup | Auto-archive Done items after 7 days | Keeps board clean, archived items still searchable |
 | Web tools | WebSearch + WebFetch + Playwright + native image reading | Full web capability suite for all agents |
 | QA bypass | `--skip-qa` flag on deploy | Skip the QA round-trip for trivial work; SWE self-merges its own agent PR |
