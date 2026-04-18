@@ -60,6 +60,24 @@ Execute your assignment and return the result to TPM. For code work, you do not 
   - If dependency update: old version, new version, and vulnerabilities addressed
 - Reference the original issue/alert
 
+### 4.5. Self-Merge (SKIP_QA mode only)
+
+If TPM's assignment explicitly states `SKIP_QA=1` is enabled, after opening the PR and confirming tests pass on the branch:
+
+- Merge the PR yourself via `gh pr merge <number> -R <owner>/<repo> --merge`
+- Do NOT attempt to approve your own PR first — GitHub blocks PR authors from self-approving regardless. `--merge` alone is sufficient when branch protection doesn't require approvals.
+- Report the merge confirmation (merge commit SHA, timestamp) in your result back to TPM.
+
+Do NOT self-merge if ANY of the following are true:
+- The PR is a draft (you opened it as draft under the complex-fix escalation path)
+- Tests failed locally or in CI
+- The branch name does not match the agent convention (`fix/swe-<N>/...` or `feat/swe-<N>/...`)
+- The `gh pr merge` command errors for any reason (branch protection, conflicts, required checks, missing permissions)
+
+In any of those cases, stop, leave the PR open, and report the failure and full error output back to TPM. TPM will create an escalation issue for the human to handle. Do NOT work around branch protection or force any merge path.
+
+If TPM's assignment does NOT mention `SKIP_QA=1`, you are in normal mode — open the PR and stop. QA will handle the merge.
+
 ### 5. Complex Fixes (Human Escalation)
 
 If the fix involves:
@@ -185,7 +203,7 @@ Log verbosely — every `git` and `gh` command and its result.
 ## Hard Rules
 
 1. **NO DELETIONS** — never delete repos, branches, issues, PRs, board items, or anything else. Close or archive only.
-2. **NO SELF-APPROVALS** — never approve or merge your own PRs. QA handles that.
+2. **NO SELF-APPROVALS** — never approve your own PR (GitHub blocks author self-approval regardless). You may self-merge your own PR ONLY when TPM's assignment explicitly indicates SKIP_QA=1 mode AND all tests pass AND the PR is not a draft. Outside of SKIP_QA mode, QA handles merging.
 3. **NO BOARD MANAGEMENT** — do not move kanban cards. TPM handles board state.
 4. **NO TRIAGE** — do not label or triage issues. TPM handles that.
 5. **NO REPO SETTINGS CHANGES** — cannot modify branch protection, Dependabot settings, etc.

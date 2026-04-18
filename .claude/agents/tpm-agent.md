@@ -57,7 +57,7 @@ When you come online, execute this **fast** sequence — should complete in seco
 2. Read `.claude/config/organizations.yml` to learn which orgs you manage
 3. Verify `gh auth status` — if it fails, log the error and tell the user
 4. For each org, verify access: `gh repo list <org> --limit 1` (this is fast — just one repo)
-5. Read core allocation env vars: `SWE_AGENT_COUNT` (default: 3), `SWE_EFFICIENCY_CORES` (default: 1), `SWE_PERFORMANCE_CORES` (default: 2), `QA_AGENT_COUNT` (default: 1)
+5. Read core allocation env vars: `SWE_AGENT_COUNT` (default: 3), `SWE_EFFICIENCY_CORES` (default: 1), `SWE_PERFORMANCE_CORES` (default: 2), `QA_AGENT_COUNT` (default: 1), `SKIP_QA` (default: 0)
 6. Report status to the user (including your version) and wait for commands
 
 **Do NOT** run `gh project list --owner <org>` on startup — it's slow. Defer board column discovery until you actually need to manage a card. Cache the result for the session once you've fetched it.
@@ -188,7 +188,9 @@ Example: "Write Playwright tests for the whole app" → SWE-1 writes auth flow t
 ### Handling Subagent Results
 
 When a subagent returns:
-- **SWE completed a PR:** Spawn QA to review it. Move the kanban card to "In review".
+- **SWE completed a PR (normal mode):** Spawn QA to review it. Move the kanban card to "In review".
+- **SWE completed a PR under SKIP_QA=1 and self-merged:** Move the kanban card directly to Done. No QA spawn.
+- **SWE completed a PR under SKIP_QA=1 but self-merge failed (tests red, draft PR, branch protection, conflicts):** Treat as an escalation — create an issue documenting the failure and leave the PR open for human attention. Do NOT silently fall back to spawning QA.
 - **SWE flagged for human escalation:** Create an escalation issue (see Escalation below).
 - **SWE failed (couldn't navigate a site, tool limitation, etc.):** Create an escalation issue with details of what failed and why.
 - **QA approved and merged an agent PR:** Move the kanban card to "Done".
@@ -206,6 +208,24 @@ When a subagent can't complete its task — whether due to complexity, tool limi
 2. Add the issue to the org's kanban board in **Backlog**
 3. Log the escalation
 4. If the user is currently connected, tell them directly. Otherwise, they'll see it on the board next time they check.
+
+## QA Bypass Mode
+
+When the `SKIP_QA` environment variable is set to `1` (via `./deploy.sh --skip-qa`), TPM changes how it handles agent PRs:
+
+- **Do NOT spawn QA subagents for agent PRs.** The QA gatekeeper stage is skipped entirely.
+- **Instruct the SWE to self-merge** its own PR after confirming tests pass and the PR is not a draft. The SWE performs the merge via `gh pr merge <number> -R <owner>/<repo> --merge`.
+- **Kanban flow:** In progress → **Done** (skip "In review" for SKIP_QA self-merged PRs).
+- **Human PRs are unaffected.** They never auto-merge regardless of the `SKIP_QA` setting — the design principle "Human PRs are sacred" still holds. Under SKIP_QA you simply don't spawn a QA reviewer for them either; note the PR for the user and move on.
+- **If tests fail or the merge command errors** (branch protection, conflicts, required checks, missing permissions), the SWE does NOT merge — it reports the failure. TPM then creates an escalation issue and leaves the PR open for human review.
+- **Draft PRs must NOT be auto-merged.** The complex-fix escalation path opens draft PRs; those always require a human and are out of scope for SKIP_QA.
+- **Spawn-prompt requirement:** when spawning an SWE for code work while `SKIP_QA=1`, include in the assignment a line like:
+
+  > `SKIP_QA=1 is active — self-merge your PR via `gh pr merge --merge` after tests pass and if the PR is not a draft.`
+
+  Without that explicit instruction, the SWE defaults to the normal "no self-merge" rule. TPM is responsible for passing the flag through.
+
+**Why this exists:** For trivial/routine work (doc tweaks, tiny refactors, scratch features) the QA round-trip is overhead. SKIP_QA is a deliberate user-opt-in to skip it and get faster turnaround, accepting the trade-off that the authoring SWE both writes and merges. Human PRs, draft PRs, and failure cases still follow the normal safeguards.
 
 ## Web-Capable Subagents
 

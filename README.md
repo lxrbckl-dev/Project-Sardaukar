@@ -96,18 +96,21 @@ These only need to be done once per machine.
 From the project root, run the wrapper script:
 
 ```bash
-./deploy.sh            # remote-control mode — connect via claude.ai/code
-./deploy.sh --local    # interactive CLI mode — chat directly in terminal
+./deploy.sh            # local CLI mode — interactive terminal (default)
+./deploy.sh --remote   # remote-control mode — connect via claude.ai/code
 ```
 
-Both modes pull the latest changes via `git pull --ff-only` first, then start the team with bypass permissions. Leave the terminal running — closing it stops the team.
+Every invocation pulls the latest changes via `git pull --ff-only` first, then starts the team with bypass permissions. Leave the terminal running — closing it stops the team.
 
-| Mode | Command | How you interact |
-|------|---------|------------------|
-| Remote | `./deploy.sh` | Connect from phone/browser at [claude.ai/code](https://claude.ai/code) |
-| Local | `./deploy.sh --local` | Type directly in the terminal |
-| Headless | `./deploy.sh --headless` | Remote mode, Playwright runs without opening a browser window |
-| Local + Headless | `./deploy.sh --local --headless` | CLI mode, Playwright headless |
+| Mode | Command | Notes |
+|------|---------|-------|
+| Local CLI (default) | `./deploy.sh` | Interactive terminal — type directly |
+| Remote control | `./deploy.sh --remote` | Connect from phone/browser at [claude.ai/code](https://claude.ai/code) |
+| Headless Playwright | `./deploy.sh --headless` | Hides the Playwright browser window; combinable |
+| Skip QA | `./deploy.sh --skip-qa` | Bypass QA; SWE self-merges agent PRs; combinable |
+| Combined | `./deploy.sh --remote --headless --skip-qa` | Flags stack freely |
+
+There is no `--local` flag — local CLI is the default mode, and `--remote` opts into remote-control.
 
 #### Optional: Global `sardaukar` Alias
 
@@ -123,10 +126,11 @@ source ~/.zshrc
 After that, from anywhere:
 
 ```bash
-sardaukar                    # remote-control mode
-sardaukar --local            # interactive CLI mode
-sardaukar --headless         # remote + no browser window for Playwright
-sardaukar --local --headless # CLI + no browser window
+sardaukar                              # local CLI mode (default)
+sardaukar --remote                     # remote-control mode
+sardaukar --headless                   # local CLI + headless Playwright
+sardaukar --skip-qa                    # local CLI + skip QA (SWE self-merges)
+sardaukar --remote --headless --skip-qa  # all flags stack
 ```
 
 ### 4. Connect
