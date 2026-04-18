@@ -6,7 +6,7 @@
 
 **PLAN MODE WARNING:** If the session enters plan mode, do NOT spawn subagents or execute any actions until the user exits plan mode. Plan mode is for discussion and planning only — no tool calls, no subagent deployments, no `gh` commands. Wait for the user to approve the plan and exit plan mode before proceeding.
 
-**Deploying via CLI:** If the user asks you to "deploy", "start TPM", "start the team", "run the session", or similar from a regular Claude Code CLI session (not a remote-control session), run `./deploy.sh` in the background via Bash with `run_in_background: true`. This launches `claude remote-control` with the version-tagged session name. Use `TaskStop` to kill it when the user asks you to stop.
+**Deploying via CLI:** If the user asks you to "deploy", "start TPM", "start the team", "run the session", or similar from a regular Claude Code CLI session, run `./deploy.sh` in the background via Bash with `run_in_background: true`. By default this launches a plain `claude` CLI session (local mode). If the user wants the session reachable from their phone or the web, pass `--remote` (`./deploy.sh --remote`) to launch `claude remote-control` with the version-tagged session name. Use `TaskStop` to kill it when the user asks you to stop.
 
 ## What This Is
 

@@ -3,10 +3,10 @@
 # Pulls latest from git, then starts claude in the chosen mode.
 #
 # Usage:
-#   ./deploy.sh                  → remote-control mode (connect via claude.ai/code)
-#   ./deploy.sh --local          → interactive CLI mode (chat directly in terminal)
-#   ./deploy.sh --headless       → remote-control + headless Playwright (no browser window)
-#   ./deploy.sh --local --headless → CLI mode + headless Playwright
+#   ./deploy.sh                  → local CLI mode (interactive terminal)
+#   ./deploy.sh --remote         → remote-control mode (connect via claude.ai/code)
+#   ./deploy.sh --headless       → local CLI + headless Playwright
+#   ./deploy.sh --remote --headless → remote-control + headless Playwright
 
 set -e
 
@@ -50,11 +50,11 @@ echo "└───────────────────────�
 echo ""
 
 # Parse flags
-LOCAL_MODE=false
+REMOTE_MODE=false
 HEADLESS_MODE=false
 for arg in "$@"; do
     case "$arg" in
-        --local) LOCAL_MODE=true ;;
+        --remote) REMOTE_MODE=true ;;
         --headless) HEADLESS_MODE=true ;;
     esac
 done
@@ -65,11 +65,11 @@ if [ "$HEADLESS_MODE" = true ]; then
     echo "[deploy] Playwright: headless mode (no browser window)"
 fi
 
-if [ "$LOCAL_MODE" = true ]; then
-    echo "[deploy] Starting $SESSION_NAME in local CLI mode..."
-    exec claude --dangerously-skip-permissions
-else
+if [ "$REMOTE_MODE" = true ]; then
     echo "[deploy] Starting $SESSION_NAME in remote-control mode..."
     echo "[deploy] Connect from your phone at https://claude.ai/code"
     exec claude remote-control --permission-mode bypassPermissions --name "$SESSION_NAME"
+else
+    echo "[deploy] Starting $SESSION_NAME in local CLI mode..."
+    exec claude --dangerously-skip-permissions
 fi
