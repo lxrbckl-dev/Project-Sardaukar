@@ -14,6 +14,13 @@ sessions
 .claude/secrets/*
 !.claude/secrets/*.example
 
+# Scheduled-tasks runtime lock (Claude Code /schedule and /loop skills)
+.claude/scheduled_tasks.lock
+
+# Stray SQLite files — leaked in from other projects' Drizzle/sqlite commands
+# running in Sardaukar's CWD. Sardaukar itself has no database.
+*.db
+
 # Playwright MCP
 .playwright-mcp/
 
