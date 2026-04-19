@@ -7,7 +7,7 @@
 #   ./deploy.sh --remote         → remote-control mode (connect via claude.ai/code)
 #   ./deploy.sh --headless       → local CLI + headless Playwright
 #   ./deploy.sh --skip-qa        → bypass QA; SWE self-merges agent PRs after green tests
-#   ./deploy.sh --embedded       → HARDCORE focus on spawning repo: no tickets/board churn; every message presumed about spawning repo; shipping verbs = direct commit to main (no branch/PR)
+#   ./deploy.sh --embedded       → HARDCORE focus on spawning repo: no tickets/board churn; every message presumed about spawning repo; local file edits only on current branch (you drive all git ops; PRs disabled; cross-repo out of scope)
 #   ./deploy.sh --remote --headless --skip-qa --embedded → flags stack freely
 
 set -e

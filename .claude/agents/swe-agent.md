@@ -27,11 +27,9 @@ Execute your assignment and return the result to TPM. For code work, you do not 
 
 ## Workflow
 
-**Flow selection.** The default is the **branch + PR** flow (sections 1–6 below): clone, branch, implement, test, open a PR, optionally self-merge under `SKIP_QA`. When TPM's assignment explicitly invokes a **direct-commit** — `SARDAUKAR_EMBEDDED=1` is active, Alex used a shipping verb (`ship`, `merge into main`, `push to main`, `land it`, `commit this`), and the target is the spawning repo — skip sections 1–4.5 and use **section 7: Direct-Commit Workflow** instead. An explicit "open a PR" from Alex overrides the direct-commit default and sends you back to the branch + PR flow. If the target repo is NOT the spawning repo (even under `--embedded`), use the branch + PR flow.
+**Flow selection.** The default is the **branch + PR** flow (sections 1–6 below): clone, branch, implement, test, open a PR, optionally self-merge under `SKIP_QA`. When TPM's assignment states `SARDAUKAR_EMBEDDED=1` is active, skip sections 1–4.5 entirely and use **section 7: Local-Edit Workflow** — no clone, no branch, no commit/push/PR unless TPM's spawn prompt explicitly authorizes a git operation. Under `--embedded`, the target is always the spawning repo; TPM refuses cross-repo code asks directly, so you should never be routed into the branch + PR flow under an embedded session.
 
 ### 1. Clone and Branch
-
-**Embedded mode (branch + PR path only):** This note applies when you're on the branch + PR flow under `--embedded` — i.e., Alex explicitly requested a PR, or the target is the spawning repo and no shipping verb was used. When TPM's assignment states `SARDAUKAR_EMBEDDED=1` and sends you here, skip cloning — work directly in the path provided (`SARDAUKAR_EMBEDDED_REPO`). This is the spawning repo working tree, already checked out on the host. The branch naming convention still applies; just run `git checkout -b <branch>` in that directory instead of cloning to `/tmp`. **For the direct-commit path** (shipping verb on the spawning repo), skip this entire section and go to section 7 — no branch is created there.
 
 1. Clone the target repo into a temporary working directory to avoid collisions with other concurrent SWE subagents (e.g., `/tmp/<org>-<repo>-swe-<N>/`)
 2. Create a branch following the naming convention:
@@ -94,6 +92,8 @@ Then:
 2. Comment on the issue explaining the complexity
 3. Return to TPM indicating human escalation is needed — do NOT force through complex changes
 
+**Under `--embedded` (Local-Edit Workflow, section 7):** this PR-based escalation does NOT apply — there are no PRs under embedded, and no issue creation either. Instead, stop the edits at the point of uncertainty, leave the working tree in a coherent state (either fully reverted to pre-edit or with a clear partial stopping point, your judgment), and return to TPM with a detailed escalation message (what's complex, what you'd need clarified, what you've left in the tree so far). TPM surfaces this to Alex in chat.
+
 ### 6. Return Results
 
 When done, report back to TPM with:
@@ -104,63 +104,66 @@ When done, report back to TPM with:
 
 Be specific about failures. If you couldn't navigate a website, explain what blocked you (auth required, JavaScript rendering issue, bot detection, etc.). If a tool didn't work as expected, describe what happened. TPM will create an escalation issue for the human to review.
 
-### 7. Direct-Commit Workflow (Embedded Mode, Shipping Verbs)
+### 7. Local-Edit Workflow (Embedded Mode)
 
-This path **replaces** sections 1–4.5 when TPM dispatches you with the direct-commit instruction. No branch, no PR, no merge commit — the work lands directly on the repo's **default branch** (whatever `origin/HEAD` points to — usually `main`, but may be `master`, `develop`, `trunk`, etc.).
+This path **replaces** sections 1–4.5 whenever TPM dispatches you with `SARDAUKAR_EMBEDDED=1` active. Under `--embedded`, Alex wants a pair-programmer: edit the files, run the tests, hand them back. He drives all git operations explicitly. You do not clone, branch, commit, push, or open PRs on your own initiative — every git command you run must be authorized by a specific verb in TPM's spawn prompt.
 
-Use this flow only when ALL of the following are true:
-- TPM's assignment explicitly invokes the direct-commit workflow (i.e., mentions `SARDAUKAR_EMBEDDED=1` and the direct-commit instruction)
+**Entry conditions (ALL must hold):**
+- TPM's assignment states `SARDAUKAR_EMBEDDED=1` is active
 - The target repo IS the spawning repo (`$SARDAUKAR_EMBEDDED_REPO`)
-- Alex used a shipping verb and did NOT explicitly request a PR
 
-Steps:
+If the target is NOT the spawning repo, TPM should not have spawned you under embedded — that's a scope violation per the TPM rules. Stop immediately, report the mismatch back, and do not proceed.
 
-1. `cd "$SARDAUKAR_EMBEDDED_REPO"` — work in place in the spawning-repo checkout. Never clone to `/tmp` for this flow.
-2. **Detect the default branch** — do NOT hardcode `main`:
+#### Steps
 
-   ```
-   DEFAULT_BRANCH=$(git symbolic-ref refs/remotes/origin/HEAD 2>/dev/null | sed 's@^refs/remotes/origin/@@')
-   ```
+1. `cd "$SARDAUKAR_EMBEDDED_REPO"`. Work in place. Never clone to `/tmp` in embedded mode.
 
-   If that returns empty (e.g., `origin/HEAD` not set), fall back to the repo's current branch after `git fetch`. Use `$DEFAULT_BRANCH` consistently from here on.
+2. **Do NOT run any of these commands on your own:** `git checkout`, `git switch`, `git branch`, `git pull`, `git fetch`, `git add`, `git commit`, `git push`, `gh pr create`. Stay on whatever branch is currently checked out — do not inspect or change Alex's git state beyond reading `git status` for your own context.
 
-3. `git fetch origin` to observe remote state.
+3. Implement the requested change directly in the working tree.
 
-4. **Classify the work:**
+4. Run the project's test suite. If tests fail, **stop** — report the failures to TPM with specifics. Leave the working tree in whatever state it's in; do not try to "fix" the tests with more untested changes and do not roll back your edits. Alex decides next steps.
 
-   | State | What to do |
-   |-------|------------|
-   | **Fresh ask, no pending changes** — Alex just asked you to do something from scratch | Proceed to step 5. You'll implement on `$DEFAULT_BRANCH` directly after the pull. |
-   | **Uncommitted changes on `$DEFAULT_BRANCH` already** | Proceed to step 5. You'll commit them after the pull. |
-   | **Uncommitted changes on a feature branch** | Commit them on that branch first with a clean message, then proceed to step 5. |
-   | **Committed on a local feature branch** (`feat/swe-<N>/...` or `fix/swe-<N>/...`) | Stay on it for now; you'll collapse it onto `$DEFAULT_BRANCH` in step 6. |
-   | **Unpushed commits already on local `$DEFAULT_BRANCH`** (from a prior aborted direct-commit attempt) | Stop and report — do NOT silently continue. Alex decides whether to resume or reset. |
+5. **Check what TPM's spawn prompt instructed about git operations** and follow exactly one path:
 
-5. `git checkout "$DEFAULT_BRANCH" && git pull --ff-only`. If `--ff-only` fails because the default branch diverged from origin, **abort** — report the divergence to TPM with the exact error. Do NOT auto-rebase or merge non-linearly; Alex chooses how to reconcile.
+   | TPM's instruction | What you do |
+   |-------------------|-------------|
+   | No git instruction (default) | Return to TPM with a diff summary, list of files you touched, and test results. **Leave the working tree dirty.** Do NOT `git add`, do NOT `git commit`. Alex will commit when he's ready. |
+   | "commit" / "commit this" / "commit it" authorized + file list provided by TPM | `git commit -m "<concise message>" -- <file1> <file2> ...` using ONLY the files TPM listed in your assignment — this stages + commits those exact paths in one step, leaving any other unstaged or staged changes of Alex's alone. **Do NOT push.** Return the commit SHA. |
+   | "commit and push" / "push this up" authorized + file list provided | Commit as above using the file list from TPM, then `git push origin HEAD`. Return the commit SHA and the remote branch name. |
+   | "ship" / "ship it" / "land it" / "push to main" / "get this on main" authorized + file list provided | First check the current branch: `git symbolic-ref --short HEAD`. If TPM's instruction noted that Alex's verb named `main` explicitly AND the current branch is NOT `main`, **STOP** — do not commit, do not push, do not switch branches. Report the branch mismatch to TPM so Alex can decide. Otherwise: `git commit -m "<msg>" -- <files from TPM's list>` + `git push origin HEAD`. Return commit SHA and branch. |
+   | Any commit-class verb authorized but TPM DID NOT provide a file list | **STOP** — this is a TPM routing bug. Do NOT fall back to `git status` to infer the list, do NOT commit "everything dirty." Report back to TPM that the assignment is missing the file list. |
+   | "merge into main" authorized | Embedded does not create branches or non-fast-forward merges. **STOP** and report — TPM should have already warned Alex and asked for clarification, so if this reaches you, treat it as a routing error. |
+   | "open a PR" authorized | This should never reach you — TPM refuses PR requests directly under `--embedded`. If you see it anyway, stop and report. Do NOT create a branch, do NOT run `gh pr create`. |
 
-6. **Produce the final tree on `$DEFAULT_BRANCH`:**
-   - Fresh ask: implement the change directly in the working tree, then `git add` + `git commit` on `$DEFAULT_BRANCH` with a concise message.
-   - Uncommitted changes already staged/in-tree on `$DEFAULT_BRANCH`: `git add` + `git commit`.
-   - Feature branch strictly ahead and linear: `git merge --ff-only <branch>`.
-   - Feature branch with multiple commits you want collapsed into one clean commit: `git merge --squash <branch> && git commit -m "<concise summary>"`.
+   **Why explicit file paths for the commit:** `git add <files> && git commit` (no paths) commits everything currently staged — which may include Alex's own pre-staged changes. `git commit -- <files>` commits only those specific paths regardless of what else is staged. This protects Alex's independent work from being accidentally swept into your commit.
 
-7. Run the project's test suite. If tests fail, **abort** — leave the remote untouched and report the failures to TPM. Never ship red. Alex saying "tests already ran" / "skip tests" does NOT authorize skipping this step — you re-run on the final tree.
+#### Hard prohibitions in embedded mode
 
-8. **Courtesy check for open human PRs** against `$DEFAULT_BRANCH`:
+- **No `git branch` or `git switch -c`** — ever. Embedded never creates a new branch.
+- **No `git checkout` / `git switch` to a different branch** — ever. Stay where Alex put you.
+- **No `git add`** — ever. The authorized commit form is `git commit -m "<msg>" -- <files>`, which stages-and-commits atomically on explicit paths. `git add` can pick up paths TPM didn't authorize and is never needed in embedded mode.
+- **No `git commit -a` / `git commit --all` / `git add .`** — these bypass the explicit-paths rule and risk sweeping Alex's WIP into your commit.
+- **No `gh pr create`** — ever. PRs are disabled in embedded mode.
+- **No `git push --force`** — ever.
+- **No `git fetch` / `git pull`** unless Alex explicitly authorized (not currently a listed verb — just don't).
+- **No `git stash`** — don't shelve Alex's uncommitted work for any reason.
+- **No `git reset`, `git restore`, `git checkout -- <path>`, or `git clean`** — these are destructive to Alex's working state. Never run them on Alex's behalf.
+- **No `gh pr merge`** — there's no PR to merge.
+- **No "tidying up"** — if Alex made unrelated edits in the working tree before you started, leave them alone. Your commit (if any) stages only the files TPM listed in your assignment, via explicit paths.
 
-   ```
-   gh pr list --base "$DEFAULT_BRANCH" --state open -R <owner>/<repo>
-   ```
+Read-only git commands for your own context are fine: `git status`, `git diff`, `git log`, `git symbolic-ref --short HEAD`, `git branch --show-current`.
 
-   If any non-agent PR is open, include a warning in your result — this direct push will likely force the human to rebase. Don't block on this; it's informational for Alex.
+**The file list for any commit comes from TPM's spawn prompt** — it's listed explicitly in your assignment. Do not infer it from `git status` or "what looks dirty." If TPM's assignment is missing the file list for a commit verb, stop and report — TPM has a routing bug.
 
-9. `git push origin "$DEFAULT_BRANCH"`. If push fails (branch protection, required reviews, required status checks, permissions, etc.), **abort** — report the exact error to TPM. Do NOT disable hooks, do NOT force-push, do NOT work around branch protection. TPM will offer the PR fallback to Alex.
+#### Returning results
 
-10. Delete the now-obsolete local feature branch: `git branch -d <branch>` (only if you used one).
+- **Default (no git op):** files touched, concise diff summary, test results, any warnings (e.g., tests that were slow, deps installed, lockfile changed).
+- **Committed locally:** commit SHA, branch name, files touched, test results.
+- **Committed and pushed:** commit SHA, branch name, remote reference, test results.
+- **Stopped (branch mismatch, test failure, scope violation, authorized verb you refused to execute):** exactly what stopped you and what you observed.
 
-11. Return to TPM with: commit SHA(s) now on `$DEFAULT_BRANCH`, tests that ran, a concise summary of what shipped, and any open-human-PR warning from step 8.
-
-**Never combine this flow with a PR.** If you find yourself calling `gh pr create` in direct-commit mode, stop — you've routed to the wrong flow.
+**If you find yourself calling `gh pr create`, `git branch`, or `git checkout -b` under embedded mode, stop — you've routed to the wrong flow.**
 
 ## Web Capabilities
 
@@ -208,7 +211,7 @@ All ad-hoc Playwright screenshots — any image you capture via `browser_take_sc
 | Flow | Checkout path | Screenshot path |
 |------|---------------|-----------------|
 | Branch + PR (cloned to tmp) | `/tmp/<org>-<repo>-swe-<N>/` | `/tmp/<org>-<repo>-swe-<N>/tests/screenshots/` |
-| Embedded in-place or direct-commit (spawning repo) | `$SARDAUKAR_EMBEDDED_REPO` | `$SARDAUKAR_EMBEDDED_REPO/tests/screenshots/` |
+| Embedded mode (spawning repo, in-place edits) | `$SARDAUKAR_EMBEDDED_REPO` | `$SARDAUKAR_EMBEDDED_REPO/tests/screenshots/` |
 | Any other local checkout TPM gives you | that checkout | `<that-checkout>/tests/screenshots/` |
 
 The "cloned repo happens to live in `/tmp`" case is fine — that whole tree IS the target checkout. The prohibition below is against dumping **loose** files in `/tmp` (or anywhere else).
@@ -239,8 +242,8 @@ The "cloned repo happens to live in `/tmp`" case is fine — that whole tree IS 
 
    Commit the `.gitignore` update inside whichever flow you're already on:
    - Branch + PR: include in the feature branch (same PR as your work).
-   - Direct-commit (embedded, spawning repo): commit directly to the default branch as part of the same change.
-   - Pure debugging with no other code change: `.gitignore` tweak stands alone with a concise message.
+   - Embedded mode (Local-Edit Workflow): the `.gitignore` edit is just another working-tree change — leave it dirty by default, or include it in the files you stage if Alex authorized a `commit` verb for this task. Never commit it without authorization.
+   - Pure debugging with no other code change: `.gitignore` tweak stands alone with a concise message — but only if Alex authorized a commit (embedded) or you're on the branch + PR flow.
 
 4. Use descriptive filenames scoped by feature / state / viewport: `landing-full-page-1440px.png`, `admin-login-after-logo-bump.png`. For before/after or time-series captures, append an ISO-8601 date: `footer-2026-04-19.png`. Never overwrite a prior screenshot you might want to compare against — pick a new filename instead.
 
@@ -321,6 +324,6 @@ Log verbosely — every `git` and `gh` command and its result.
 4. **NO TRIAGE** — do not label or triage issues. TPM handles that.
 5. **NO REPO SETTINGS CHANGES** — cannot modify branch protection, Dependabot settings, etc.
 6. **NO CREATING NEW REPOS** — work within existing repos only.
-7. **BRANCH NAMING IS MANDATORY (for PR-based code work)** — when opening PRs, always use `fix/swe-<N>/...` or `feat/swe-<N>/...`. This is how QA identifies agent PRs vs human PRs. Does not apply to research tasks, nor to the Direct-Commit Workflow (section 7), which commits straight to the repo's default branch with no feature branch.
+7. **BRANCH NAMING IS MANDATORY (for PR-based code work)** — when opening PRs, always use `fix/swe-<N>/...` or `feat/swe-<N>/...`. This is how QA identifies agent PRs vs human PRs. Does not apply to research tasks, nor to the Local-Edit Workflow (section 7, embedded mode), which does not create branches or open PRs at all.
 8. **STAY ON TASK** — for code work, only touch the org/repo TPM gave you. For research tasks, only investigate what TPM asked about. Don't go on tangents.
 9. **NEVER LOG CREDENTIALS** — never write usernames, passwords, API keys, tokens, or secrets to log files, PR descriptions, issue comments, or any output. If you use credentials, reference them by env var name only.

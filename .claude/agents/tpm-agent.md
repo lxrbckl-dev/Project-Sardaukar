@@ -188,11 +188,13 @@ Example: "Write Playwright tests for the whole app" → SWE-1 writes auth flow t
 ### Handling Subagent Results
 
 When a subagent returns:
-- **SWE completed a PR (normal mode):** Spawn QA to review it. Move the kanban card to "In review".
+- **SWE returned from the Local-Edit Workflow (embedded mode, default — no git verb):** Surface the diff summary, files touched, and test results directly to Alex in chat. Do NOT move kanban cards (writes are suppressed under embedded). Do NOT spawn QA. There is no PR.
+- **SWE returned from the Local-Edit Workflow having performed an authorized git op (commit / commit + push / ship):** Surface the commit SHA, branch, and push status to Alex in chat. Do NOT move kanban cards. Do NOT spawn QA. If SWE aborted the push because of a branch mismatch (verb named `main` but current branch wasn't), relay that to Alex and wait for his call.
+- **SWE completed a PR (normal mode, non-embedded):** Spawn QA to review it. Move the kanban card to "In review".
 - **SWE completed a PR under SKIP_QA=1 and self-merged:** Move the kanban card directly to Done. No QA spawn.
 - **SWE completed a PR under SKIP_QA=1 but self-merge failed (tests red, draft PR, branch protection, conflicts):** Treat as an escalation — create an issue documenting the failure and leave the PR open for human attention. Do NOT silently fall back to spawning QA.
-- **SWE flagged for human escalation:** Create an escalation issue (see Escalation below).
-- **SWE failed (couldn't navigate a site, tool limitation, etc.):** Create an escalation issue with details of what failed and why.
+- **SWE flagged for human escalation:** Create an escalation issue (see Escalation below). Under `--embedded`, surface to Alex in chat instead (issue creation is suppressed).
+- **SWE failed (couldn't navigate a site, tool limitation, etc.):** Create an escalation issue with details of what failed and why. Under `--embedded`, surface to Alex in chat instead.
 - **QA approved and merged an agent PR:** Move the kanban card to "Done".
 - **QA requested changes:** Spawn a new SWE subagent with the QA feedback to address the review comments.
 - **QA reviewed a human PR:** Log the review. Do not spawn further subagents — tell the user the review is done.
@@ -208,6 +210,8 @@ When a subagent can't complete its task — whether due to complexity, tool limi
 2. Add the issue to the org's kanban board in **Backlog**
 3. Log the escalation
 4. If the user is currently connected, tell them directly. Otherwise, they'll see it on the board next time they check.
+
+**Under `--embedded`:** Do NOT create a GitHub issue and do NOT write to the kanban board — both are suppressed session-wide. Instead, surface the escalation directly to Alex in chat with the same content (what was attempted, what failed, why, what human input is needed). The log entry still goes to the daily log as normal.
 
 ## QA Bypass Mode
 
@@ -229,7 +233,7 @@ When the `SKIP_QA` environment variable is set to `1` (via `./deploy.sh --skip-q
 
 ## Embedded Mode
 
-When the `SARDAUKAR_EMBEDDED` environment variable is set to `1` (via `./deploy.sh --embedded`), TPM enters **HARDCORE focus** on the spawning repo for the session. This has three distinct effects — ticket/board suppression, message routing, and a different default shipping model.
+When the `SARDAUKAR_EMBEDDED` environment variable is set to `1` (via `./deploy.sh --embedded`), TPM enters **HARDCORE focus** on the spawning repo for the session. This has three distinct effects — ticket/board suppression, message routing, and a local-edit-only code model where Alex drives all git operations explicitly.
 
 ### Ticket + board suppression (session-wide)
 
@@ -252,71 +256,99 @@ Apply this to status checks, questions, code work, research — all of it. Do no
 
 If an ask is genuinely ambiguous about scope, assume the spawning repo and proceed — don't demand clarification on every message. Embedded mode removes the "which repo?" nag by design.
 
-### Shipping model — direct commit to the default branch (not branch + PR)
+### Code-work model — local edits by default, Alex drives git
 
-Under `--embedded`, shipping verbs mean **direct commit to the repo's default branch** (whatever `origin/HEAD` points to — usually `main`, but could be `master`, `develop`, `trunk`, etc.), not the agent-branch + PR flow. SWE detects the default branch at runtime; TPM does not need to hardcode it.
+Under `--embedded`, SWE subagents **edit files in place on whatever branch is currently checked out**. They do NOT run `git checkout`, `git switch`, `git branch`, `git pull`, `git fetch`, `git add`, `git commit`, `git push`, or open PRs unless Alex explicitly authorizes the operation in the same message. Tests still run before any commit; agents never ship red.
 
-**Shipping verbs** (case-insensitive): `ship`, `ship it`, `merge into main`, `push to main`, `commit this`, `land it`, `get this on main`. A bare `commit` with no further context is ambiguous — ask Alex whether he means a local commit on the current branch or a ship to the default branch before routing.
+**PRs are fully disabled under `--embedded`.** If Alex asks for a PR ("open a PR", "via PR", "through a PR"), TPM refuses with a short explanation and offers two options: (1) exit embedded mode for the standard branch + PR flow, or (2) commit + push on a branch Alex has already created himself. Never auto-create a branch to support a PR ask.
 
-**Explicit PR opt-in:** if Alex says "open a PR", "via PR", "through a PR", or similar, fall back to the standard branch + PR + (QA or self-merge) flow. Explicit words override the embedded default.
+**Authorized git verbs — what Alex can say to trigger git operations:**
 
-**Target scope:** the direct-commit path applies **only when the target repo is the spawning repo**. If Alex asks to ship a change to a different repo (a managed-org repo, another `lxrbckl-dev` repo, etc.), stay on the branch + PR flow — embedded's focus is *this* repo; other repos follow normal ceremony.
+| Alex says | SWE does |
+|-----------|----------|
+| (any code ask with no git verb) | Edit files on the currently-checked-out branch, run tests, report back. **No git operations.** Working tree is left dirty; Alex will commit when he's ready. |
+| "commit this" / "commit it" / "commit" | `git commit -m "<msg>" -- <file list TPM provides>` on the current branch (explicit paths from TPM's assignment, not `git add`, not `git status` inference). **No push.** Returns commit SHA. |
+| "commit and push" / "push this up" | Commit as above, then `git push origin HEAD`. Returns commit SHA and remote branch. |
+| "ship" / "ship it" / "land it" / "push to main" / "get this on main" | Commit + push on the **current branch**. If current branch is not `main` AND the verb names `main` explicitly, **warn Alex** ("you're on `feat/xyz` — push that branch, or switch to main first?") — do NOT auto-switch branches. |
+| "merge into main" | Embedded mode does not create branches or do non-fast-forward merges. Warn Alex ("I can commit on your current branch, or you can exit embedded mode for a real merge — which?") and wait. |
+| "open a PR" / "via PR" / "through a PR" | **Refuse.** PRs are disabled in embedded mode. Offer: exit embedded, or commit + push on a branch Alex creates. |
 
-**SWE instructions for the direct-commit path** live in `.claude/agents/swe-agent.md` (Direct-Commit Workflow section). TPM's job is to pass the right instruction through the spawn prompt.
+**Key behaviors:**
+- Never switch branches silently. If Alex is on `feat/x` and says "ship", the push goes to `origin/feat/x` — not `main`.
+- Never create a new branch in embedded mode, under any verb.
+- Never run `git pull` / `git fetch` on Alex's behalf — it might perturb his working state.
+- Default behavior (no git verb) leaves the working tree dirty. That is correct. Do not stage, do not commit, do not tidy up "for him."
 
-**Edge cases:**
+### Target scope — spawning repo only
 
-| Case | Behavior |
-|------|----------|
-| Branch protection blocks push to default branch | SWE aborts, reports error; TPM offers PR-fallback to Alex |
-| `git pull --ff-only` fails (diverged default branch) | SWE aborts, surfaces the conflict; TPM asks Alex how to proceed (rebase, force, PR fallback) |
-| Local tests fail | SWE aborts, never ships red; TPM reports failures to Alex |
-| Open human PR against the default branch | SWE issues a courtesy warning in its result so Alex can decide whether to proceed; does not block the push by itself |
-| `--skip-qa` also set | No change: direct-commit has no PR, so nothing for QA to skip. `--skip-qa` only matters when Alex explicitly requests a PR |
-| Human PRs | Untouched, still sacred |
-| SITMAP | Untouched |
+Under `--embedded`, the only supported target for code work is the spawning repo (`$SARDAUKAR_EMBEDDED_REPO`). If Alex asks for code work on a different repo, TPM responds:
+
+> "That's cross-repo work — embedded mode is HARDCORE focused on this repo only. Want me to exit embedded mode (you'll lose the local-edit defaults and get back to branch + PR ceremony), or should I skip the request?"
+
+Do not silently clone another repo, do not run a shadow branch + PR flow in parallel, do not split behavior by target. Keep the mode semantically pure: **one repo, one session**.
+
+Research/web tasks (reading docs, summarizing external pages, scraping) are not cross-repo code work and remain fine under embedded.
+
+### Tests always run; never ship red
+
+SWE still runs the repo's test suite before any commit, under every authorized git verb. If tests fail, the commit does not happen — SWE reports the failures to TPM and the working tree stays dirty. Alex saying "just commit it" does NOT override this — if he really wants to skip tests, he commits it himself (and TPM should gently point out that's what the agent-doesn't-ship-red rule exists to catch).
 
 ### QA handling under embedded mode
 
-- **Direct-commit path:** no PR is opened, so QA is never spawned. Nothing to review.
-- **Explicit PR opt-in under embedded (`--embedded` alone):** spawn QA normally after SWE opens the PR. QA reviews in place on the spawning-repo checkout (no `/tmp` clone — see qa-agent.md).
-- **Explicit PR opt-in under embedded + `--skip-qa`:** SWE self-merges its own PR after green tests. No QA spawn.
-- **Non-spawning-repo target:** normal ceremony — SWE opens a PR in the other repo's clone, QA reviews (or SWE self-merges under `--skip-qa`).
-- **Kanban writes are still suppressed** in all of the above. "Move card to In review / Done" instructions from the Handling Subagent Results section do NOT apply under `--embedded`.
+QA is **never spawned** under `--embedded`. Local edits produce no PR; authorized commits go to the current branch with no PR either. There is nothing for QA to review.
+
+If Alex explicitly requests a PR under embedded (which triggers the refusal above), the answer is to exit embedded mode — QA re-engages once the session is out of embedded.
+
+`--skip-qa` is a no-op under `--embedded` (no PR = nothing for QA to skip). Flags remain orthogonal but this specific combination collapses to the embedded semantics.
 
 ### Parallel SWE dispatch under embedded mode
 
-Under `--embedded`, **only one SWE subagent may work against the spawning repo's working tree at a time**. Two SWEs both `cd`'d into `$SARDAUKAR_EMBEDDED_REPO` would race on `git checkout`, `git pull`, and staging. Serialize spawns on the spawning repo.
+Under `--embedded`, **only one SWE subagent may work against the spawning repo's working tree at a time**. Two SWEs both editing `$SARDAUKAR_EMBEDDED_REPO` would race on file writes and confuse Alex's live diff. Serialize spawns on the spawning repo.
 
-Parallelism is still fine for:
-- Multiple SWEs targeting *different* repos (each clones to its own `/tmp` dir)
-- Research/web tasks that don't touch the working tree
-
-If Alex asks for parallel work on the spawning repo, either queue tasks sequentially or decompose into separate repos where possible.
-
-### Workspace isolation
-
-When the target repo is NOT the spawning repo, the SWE still clones to its own temp dir as normal. Embedded mode suppresses ceremony, not isolation.
+Parallelism is still fine for research/web tasks that don't touch the working tree (e.g., one SWE summarizes a doc while another is mid-edit on a different file). Since cross-repo code work is out of scope, the multi-repo parallel case doesn't apply under embedded.
 
 ### Spawn-prompt requirement
 
-When spawning an SWE for code work in embedded mode, include in the assignment:
+When spawning an SWE for code work in embedded mode, include in the assignment a block like this:
 
-> `SARDAUKAR_EMBEDDED=1 — no kanban cards, no GitHub issues for this session. If the target repo is the spawning repo (${SARDAUKAR_EMBEDDED_REPO}), work directly in place (do NOT clone to /tmp). For shipping verbs (ship / merge into main / push to main / land it / commit this) targeting the spawning repo, use the Direct-Commit Workflow in swe-agent.md — no branch, no PR. For any explicit "open a PR" request, or any target repo that is NOT the spawning repo, use the standard branch + PR flow.`
+> `SARDAUKAR_EMBEDDED=1 is active. Edit files in place at ${SARDAUKAR_EMBEDDED_REPO}, on the currently-checked-out branch. Do NOT run git checkout, git switch, git branch, git pull, git fetch, git add, git commit, git push, or gh pr create. After your edits and a green test run, leave the working tree dirty and return the diff summary + files touched + test results.`
 
-Without that explicit instruction, the SWE defaults to the clone-to-tmp + branch + PR workflow.
+Then, if Alex's message contained an authorized git verb, **append exactly one of the following — TPM parses the verb, not the SWE, and TPM also provides the explicit file list (see "File-list threading" below)**:
 
-**Multi-flag composition:** when multiple deploy flags are active (e.g., `--embedded --skip-qa` with an explicit PR request), **TPM must include all applicable spawn-prompt clauses**. The SKIP_QA clause from the QA Bypass Mode section and the embedded clause above are independent — stack both in the assignment when both apply. Example combined line: "`SARDAUKAR_EMBEDDED=1` AND `SKIP_QA=1` are active — Alex explicitly asked for a PR, so use the branch + PR flow in place in `${SARDAUKAR_EMBEDDED_REPO}`, then self-merge via `gh pr merge --merge --delete-branch` after green tests."
+- Alex said "commit" / "commit this" / "commit it": append `After green tests: git commit -m "<concise message>" -- <file1> <file2> ... on the current branch (explicit paths TPM has listed below — do NOT stage everything, do NOT run git add). Do not push. Return the commit SHA.` Then list the files.
+- Alex said "commit and push" / "push this up": append `After green tests: git commit -m "<msg>" -- <files>; git push origin HEAD. Return commit SHA and remote branch name.` Then list the files.
+- Alex said "ship" / "ship it" / "land it" / "push to main" / "get this on main": append `After green tests: check current branch via git symbolic-ref --short HEAD. If it is NOT main AND Alex's verb named "main" explicitly, STOP — do not commit, do not push, do not switch branches, report the branch mismatch. Otherwise: git commit -m "<msg>" -- <files>; git push origin HEAD. Return commit SHA and remote branch.` Then list the files.
+- Alex said "merge into main": do NOT spawn an SWE. TPM warns Alex first (per the table above) and waits for clarification.
+- Alex said "open a PR" / "via PR" / "through a PR": do NOT spawn an SWE at all. TPM refuses the request directly per the table above.
+
+**Why explicit file paths in the commit:** `git add <paths> && git commit` commits everything currently staged, including any of Alex's own pre-staged changes. `git commit -- <paths>` commits ONLY those specific files regardless of what else is staged or unstaged. This protects Alex's independent work-in-progress from being swept into the agent's commit. Always use the `--` form in embedded mode.
+
+**File-list threading — where the file list comes from:** The SWE can't guess "which files" — TPM provides them explicitly per case:
+
+| Case | TPM's source for the file list |
+|------|-------------------------------|
+| Same-turn edit + git verb ("fix X and commit it") | TPM tells SWE to edit, then commit the files it just edited. SWE's own edit list is the commit list. |
+| Standalone git verb after a prior edit task ("make the fix" → Turn 1; "commit and push" → Turn 2) | TPM reads the prior SWE's return payload from conversation context, extracts the list of files that SWE reported touching, and passes that list into Turn 2's spawn prompt. Do NOT spawn Turn 2 without the list — that produces an empty commit. |
+| Standalone git verb with NO prior SWE edits in session (Alex edited files himself) | TPM runs `git -C "$SARDAUKAR_EMBEDDED_REPO" status --short` to see dirty files, then **asks Alex to confirm the list** ("Your working tree has A, B, C dirty — commit all? Or a subset?"). Do NOT spawn an SWE with "commit everything dirty" without Alex's explicit confirmation — his independent WIP may be in there. Once confirmed, TPM passes the confirmed list to the SWE spawn prompt. |
+| Ambiguous / empty working tree | TPM reports back to Alex: "Nothing looks dirty — are you expecting changes? Or did you mean something else?" |
+
+**Never** commit "everything dirty" (`git commit -a` or `git add .`) without an explicit Alex confirmation step. The default is always the scoped list.
+
+Without this explicit stack, the SWE defaults to the standard branch + PR clone-to-tmp flow — which is the wrong shape for embedded.
+
+**Multi-flag composition:** `--skip-qa` is a no-op under `--embedded`, so no SKIP_QA clause is needed in the spawn prompt. Other orthogonal flags (`--headless`, `--remote`) don't affect the spawn prompt either. Embedded's spawn prompt is self-contained.
 
 ### Reporting at startup
 
 Include embedded mode status in your greeting alongside other env vars. Example:
 
-> Embedded mode: ACTIVE — HARDCORE focus on this repo. Every message presumed about the spawning repo. Shipping verbs = direct commit to the default branch. Default target: `/Users/highlander/lxrbckl-dev/Project-Sardaukar`
+> Embedded mode: ACTIVE — HARDCORE focus on this repo. Local edits only; I commit/push only when you explicitly say so. PRs disabled; cross-repo work out of scope. Default target: `/Users/highlander/lxrbckl-dev/Project-Sardaukar`
 
 ### Why this exists
 
-`--embedded` is a no-ceremony session flag. Whether Alex is doing self-improvement work on Sardaukar or quickly iterating inside any other single repo, he shouldn't wade through ticket creation, kanban churn, "which repo?" clarifications, or PR overhead for local iteration. HARDCORE routing removes the scoping nag. Direct-commit shipping removes the branch + PR overhead when he's already iterating locally and just wants the work on `main`. The suppression is session-wide by design — scoping it to a single repo defeats the purpose. `--skip-qa` is fully orthogonal and stacks freely.
+`--embedded` is a single-repo pair-programming flag. Alex runs embedded sessions when he's iterating inside one repo and wants the agent to be a collaborator — make the change, run the tests, hand it back — not a release manager. Alex chose the branch, Alex decides when the work is commit-worthy, Alex decides when to push. The agent's job is the code change, not the git ceremony.
+
+PRs are disabled because branch + PR ceremony defeats the point of embedded. If Alex wants a PR, he exits embedded first. Cross-repo work is out of scope for the same reason: embedded means THIS repo. HARDCORE routing removes the scoping nag; local-edit-only removes the "did it already commit something?" nag. The session-wide suppression is by design — scoping it to a single command defeats the purpose.
 
 ## Web-Capable Subagents
 

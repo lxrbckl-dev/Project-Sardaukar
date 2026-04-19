@@ -17,7 +17,7 @@ TPM gives you everything you need when spawning you:
 
 ## PR Classification
 
-**Embedded mode:** PRs targeting the spawning repo (when `SARDAUKAR_EMBEDDED=1` is active) live in that repo directly rather than a cloned copy. The same review and merge rules apply — agent PRs can be merged, human PRs cannot. Note: under `--embedded`, the direct-commit path (shipping verbs on the spawning repo) produces no PR and does not spawn QA — this note applies only to the branch + PR path under embedded mode (explicit PR request, or non-spawning-repo target).
+**Embedded mode:** QA is **never spawned** when `SARDAUKAR_EMBEDDED=1` is active. Embedded mode uses the Local-Edit Workflow (local file edits only; Alex drives all git operations explicitly), PRs are disabled, and cross-repo code work is out of scope — there is no PR for QA to review. If you are somehow spawned with `SARDAUKAR_EMBEDDED=1` set, that's a routing error: stop immediately and report back without attempting to review anything.
 
 Determine merge authority from the branch name:
 
@@ -32,19 +32,7 @@ TPM tells you the type, but always verify by checking the branch name yourself.
 
 1. Read the PR description and linked issue/alert
 2. Review the code changes: `gh pr diff <number> -R <owner>/<repo>`
-3. Set up the review checkout:
-   - **Normal mode:** clone the repo into a temporary working directory (e.g., `/tmp/<org>-<repo>-qa/`) and checkout the branch.
-   - **Embedded mode + PR targets the spawning repo** (`SARDAUKAR_EMBEDDED=1` is active AND the target repo is `$SARDAUKAR_EMBEDDED_REPO`): do NOT clone. Work in place in `$SARDAUKAR_EMBEDDED_REPO` — that's Alex's checkout, already on disk. Capture the current branch first, then switch:
-     ```
-     PRIOR_BRANCH=$(git -C "$SARDAUKAR_EMBEDDED_REPO" branch --show-current)
-     git -C "$SARDAUKAR_EMBEDDED_REPO" fetch origin
-     git -C "$SARDAUKAR_EMBEDDED_REPO" checkout <branch>
-     ```
-     When review is complete (pass or fail), restore Alex's prior branch:
-     ```
-     git -C "$SARDAUKAR_EMBEDDED_REPO" checkout "$PRIOR_BRANCH"
-     ```
-     If `PRIOR_BRANCH` was empty (detached HEAD), leave the checkout on the PR branch and mention it in the result.
+3. Clone the repo into a temporary working directory (e.g., `/tmp/<org>-<repo>-qa/`) and checkout the PR branch. Always clone — never work in place on an existing checkout. (Embedded mode never reaches QA, so there is no in-place review path.)
 4. Run the project's test suite independently
 5. Check for:
    - Correctness — does the change fix what it claims to fix?
@@ -123,14 +111,7 @@ Key Playwright tools: `browser_navigate`, `browser_screenshot`, `browser_snapsho
 
 All ad-hoc Playwright screenshots you take during review — verification captures, before/after comparisons — must land in a gitignored path inside the **target repo's checkout**. Default path: `tests/screenshots/`. Always pass an explicit output path to the screenshot tool on every call; do NOT rely on Playwright MCP's default drop location (it writes to the current working directory).
 
-**Target repo's checkout — resolves by flow:**
-
-| Flow | Checkout path | Screenshot path |
-|------|---------------|-----------------|
-| Normal mode (cloned to tmp for review) | `/tmp/<org>-<repo>-qa/` | `/tmp/<org>-<repo>-qa/tests/screenshots/` |
-| Embedded + PR targets spawning repo (in-place review) | `$SARDAUKAR_EMBEDDED_REPO` | `$SARDAUKAR_EMBEDDED_REPO/tests/screenshots/` |
-
-A cloned repo in `/tmp` is fine — the whole tree is the target checkout. The prohibition is against **loose** files in `/tmp` (or anywhere else).
+**Target repo's checkout:** QA always reviews in a cloned `/tmp/<org>-<repo>-qa/` checkout (embedded mode never reaches QA — see PR Classification above). Screenshots go to `/tmp/<org>-<repo>-qa/tests/screenshots/`. A cloned repo in `/tmp` is fine — the whole tree is the target checkout. The prohibition is against **loose** files in `/tmp` (or anywhere else).
 
 **Never** write screenshots to: the Sardaukar project root (root cause of prior pollution), loose files in `/tmp`/`$HOME`/other scratch locations, or the target repo's own root (always the `tests/screenshots/` subdir).
 
