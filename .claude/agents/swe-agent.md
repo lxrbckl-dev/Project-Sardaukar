@@ -199,6 +199,57 @@ You have full web interaction capabilities. Use them whenever your assignment re
 - Pass a screenshot file path to the Read tool and Claude will see the image.
 - Use for OCR, visual verification, comparing before/after screenshots.
 
+### Screenshot Output Path
+
+All ad-hoc Playwright screenshots — any image you capture via `browser_take_screenshot` (or equivalent) for verification, debugging, or research — must land in a gitignored path inside the **target repo's checkout**. Default path: `tests/screenshots/`. Always pass an explicit output path to the screenshot tool on every call — do NOT rely on Playwright MCP's default drop location (it writes to the current working directory, which is how Sardaukar's root got polluted).
+
+**Target repo's checkout — resolves by flow:**
+
+| Flow | Checkout path | Screenshot path |
+|------|---------------|-----------------|
+| Branch + PR (cloned to tmp) | `/tmp/<org>-<repo>-swe-<N>/` | `/tmp/<org>-<repo>-swe-<N>/tests/screenshots/` |
+| Embedded in-place or direct-commit (spawning repo) | `$SARDAUKAR_EMBEDDED_REPO` | `$SARDAUKAR_EMBEDDED_REPO/tests/screenshots/` |
+| Any other local checkout TPM gives you | that checkout | `<that-checkout>/tests/screenshots/` |
+
+The "cloned repo happens to live in `/tmp`" case is fine — that whole tree IS the target checkout. The prohibition below is against dumping **loose** files in `/tmp` (or anywhere else).
+
+**Never** write screenshots to:
+- The Sardaukar project root (where MCP used to drop them by default — root cause of the current mess).
+- Loose files in `/tmp`, `$HOME`, `/var`, or any ad-hoc scratch location.
+- The target repo's own root (always the `tests/screenshots/` subdirectory, never directly in the repo root).
+
+**Setup — do this once, before the first screenshot of your task:**
+
+1. `mkdir -p <checkout>/tests/screenshots`.
+
+2. **If the target repo already has a different gitignored Playwright screenshot convention** (e.g., `screenshots/`, `e2e/screenshots/`, `test-output/screenshots/`), **use the existing convention instead** — don't fight the repo. Detect this by grepping `.gitignore` and `playwright.config.*` for `screenshot` before creating `tests/screenshots/`. If found, use that path for the rest of this rule.
+
+3. Confirm the chosen path is gitignored using `git check-ignore` — this is the authoritative check:
+
+   ```
+   git -C <checkout> check-ignore -q <path>/.sentinel && echo IGNORED || echo NOT_IGNORED
+   ```
+
+   If `NOT_IGNORED`, append to the target repo's `.gitignore`:
+
+   ```
+   # Playwright screenshots — local debugging / verification, not committed
+   tests/screenshots/
+   ```
+
+   Commit the `.gitignore` update inside whichever flow you're already on:
+   - Branch + PR: include in the feature branch (same PR as your work).
+   - Direct-commit (embedded, spawning repo): commit directly to the default branch as part of the same change.
+   - Pure debugging with no other code change: `.gitignore` tweak stands alone with a concise message.
+
+4. Use descriptive filenames scoped by feature / state / viewport: `landing-full-page-1440px.png`, `admin-login-after-logo-bump.png`. For before/after or time-series captures, append an ISO-8601 date: `footer-2026-04-19.png`. Never overwrite a prior screenshot you might want to compare against — pick a new filename instead.
+
+**Playwright test-runner artifacts are separate.** Videos, traces, HARs, and HTML reports produced by `npx playwright test` follow whatever `outputDir` / `reporter` paths `playwright.config.*` declares in the target repo (defaults `test-results/` and `playwright-report/`). Those paths must ALSO be gitignored in the target repo — add them the same way if missing. Do NOT redirect runner outputs into `tests/screenshots/`; mixing ad-hoc captures and runner outputs races when tests and debugging run concurrently, and some Playwright reporters clobber the directory between runs.
+
+**Research tasks with no target repo** — screenshots taken for pure research (e.g., "screenshot today's Fox News headlines") have no target repo to host them. Save them to a task-scoped temp dir `/tmp/swe-<N>-research/`, include the absolute paths in your return payload to TPM so it can read them, and `rm -rf /tmp/swe-<N>-research/` before you return. Never leave orphan images around for the next session to stumble on.
+
+**Playwright config itself lives in the target repo.** When you're setting up or extending a Playwright suite, put `playwright.config.*`, specs, fixtures, and page objects in the target repo — NOT in Sardaukar. Sardaukar ships the Playwright MCP server so agents can drive a browser; it does not house feature test suites.
+
 ### Guidelines
 
 - **For research tasks:** Use WebSearch to find sources, WebFetch or Playwright to read pages, and return a clear summary to TPM. Include source URLs.

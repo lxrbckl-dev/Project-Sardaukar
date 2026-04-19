@@ -16,3 +16,6 @@ sessions
 
 # Playwright MCP
 .playwright-mcp/
+
+# Playwright screenshots — local debugging / verification, not committed
+tests/screenshots/

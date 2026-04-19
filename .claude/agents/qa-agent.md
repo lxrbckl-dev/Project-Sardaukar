@@ -119,6 +119,48 @@ When reviewing a PR that changes a web UI:
 
 Key Playwright tools: `browser_navigate`, `browser_screenshot`, `browser_snapshot`, `browser_click`.
 
+### Screenshot Output Path
+
+All ad-hoc Playwright screenshots you take during review — verification captures, before/after comparisons — must land in a gitignored path inside the **target repo's checkout**. Default path: `tests/screenshots/`. Always pass an explicit output path to the screenshot tool on every call; do NOT rely on Playwright MCP's default drop location (it writes to the current working directory).
+
+**Target repo's checkout — resolves by flow:**
+
+| Flow | Checkout path | Screenshot path |
+|------|---------------|-----------------|
+| Normal mode (cloned to tmp for review) | `/tmp/<org>-<repo>-qa/` | `/tmp/<org>-<repo>-qa/tests/screenshots/` |
+| Embedded + PR targets spawning repo (in-place review) | `$SARDAUKAR_EMBEDDED_REPO` | `$SARDAUKAR_EMBEDDED_REPO/tests/screenshots/` |
+
+A cloned repo in `/tmp` is fine — the whole tree is the target checkout. The prohibition is against **loose** files in `/tmp` (or anywhere else).
+
+**Never** write screenshots to: the Sardaukar project root (root cause of prior pollution), loose files in `/tmp`/`$HOME`/other scratch locations, or the target repo's own root (always the `tests/screenshots/` subdir).
+
+**Setup — before the first screenshot:**
+
+1. `mkdir -p <checkout>/tests/screenshots`.
+
+2. **If the target repo already has a different gitignored Playwright screenshot convention** (e.g., `screenshots/`, `e2e/screenshots/`), use the existing convention — don't force `tests/screenshots/`. Grep `.gitignore` and `playwright.config.*` for `screenshot` to detect.
+
+3. Confirm the chosen path is gitignored using `git check-ignore`:
+
+   ```
+   git -C <checkout> check-ignore -q <path>/.sentinel && echo IGNORED || echo NOT_IGNORED
+   ```
+
+   If `NOT_IGNORED`, append to the target repo's `.gitignore`:
+
+   ```
+   # Playwright screenshots — local debugging / verification, not committed
+   tests/screenshots/
+   ```
+
+   **QA authority for this tweak:** a `.gitignore` update for QA's own screenshot output counts as test infrastructure, which is within your domain per Hard Rule #2 (you may write test code / test infra, just not feature code). Commit it inside the PR review context (on the PR branch, alongside any missing-test commits you add). Include the entry in your review comment so Alex can see why the diff grew.
+
+4. Use descriptive filenames: `landing-hero-after-fix-1440px.png`, `admin-login-before-reset.png`. For before/after captures during a single review, include `before` / `after` or an ISO date in the filename — never overwrite a comparison capture.
+
+**Playwright test-runner artifacts are separate.** `npx playwright test` writes videos, traces, HARs, and reports to the paths `playwright.config.*` declares (defaults `test-results/` and `playwright-report/`). Those must also be gitignored in the target repo. Do NOT redirect them into `tests/screenshots/`; mixing races with your ad-hoc captures.
+
+**If the PR you're reviewing is adding or modifying Playwright setup,** verify the config (`playwright.config.*`), specs, and fixtures live in the target repo — NOT in Sardaukar. Flag any Playwright test-suite code that leaks into Sardaukar as a changes-requested blocker.
+
 ### Running Playwright Tests
 
 If the repo includes Playwright tests, run them as part of your test step and report any failures in your review.
