@@ -68,7 +68,7 @@ Execute your assignment and return the result to TPM. For code work, you do not 
 
 If TPM's assignment explicitly states `SKIP_QA=1` is enabled, after opening the PR and confirming tests pass on the branch:
 
-- Merge the PR yourself via `gh pr merge <number> -R <owner>/<repo> --merge`
+- Merge the PR yourself via `gh pr merge <number> -R <owner>/<repo> --merge --delete-branch`
 - Do NOT attempt to approve your own PR first — GitHub blocks PR authors from self-approving regardless. `--merge` alone is sufficient when branch protection doesn't require approvals.
 - Report the merge confirmation (merge commit SHA, timestamp) in your result back to TPM.
 
@@ -106,7 +106,7 @@ Be specific about failures. If you couldn't navigate a website, explain what blo
 
 ### 7. Direct-Commit Workflow (Embedded Mode, Shipping Verbs)
 
-This path **replaces** sections 1–4.5 when TPM dispatches you with the direct-commit instruction. No branch, no PR, no merge commit — the work lands directly on `main` (or whatever target branch TPM names, usually `main`).
+This path **replaces** sections 1–4.5 when TPM dispatches you with the direct-commit instruction. No branch, no PR, no merge commit — the work lands directly on the repo's **default branch** (whatever `origin/HEAD` points to — usually `main`, but may be `master`, `develop`, `trunk`, etc.).
 
 Use this flow only when ALL of the following are true:
 - TPM's assignment explicitly invokes the direct-commit workflow (i.e., mentions `SARDAUKAR_EMBEDDED=1` and the direct-commit instruction)
@@ -116,20 +116,49 @@ Use this flow only when ALL of the following are true:
 Steps:
 
 1. `cd "$SARDAUKAR_EMBEDDED_REPO"` — work in place in the spawning-repo checkout. Never clone to `/tmp` for this flow.
-2. `git fetch origin` to observe remote state.
-3. Determine where the pending work lives:
-   - Uncommitted changes on `main`: nothing to move, proceed to step 4.
-   - Committed on a local feature branch (`feat/swe-<N>/...` or `fix/swe-<N>/...`): stay on that branch; you'll bring it over in step 5.
-   - Uncommitted on a feature branch: commit it there first with a clean message.
-4. `git checkout main && git pull --ff-only`. If `--ff-only` fails because `main` diverged from origin, **abort** — report the divergence to TPM with the exact error. Do NOT auto-rebase or merge non-linearly; Alex chooses how to reconcile.
-5. Bring the work onto `main`:
-   - Work already on `main`: proceed.
-   - Feature branch strictly ahead of `main`: `git merge --ff-only <branch>`.
+2. **Detect the default branch** — do NOT hardcode `main`:
+
+   ```
+   DEFAULT_BRANCH=$(git symbolic-ref refs/remotes/origin/HEAD 2>/dev/null | sed 's@^refs/remotes/origin/@@')
+   ```
+
+   If that returns empty (e.g., `origin/HEAD` not set), fall back to the repo's current branch after `git fetch`. Use `$DEFAULT_BRANCH` consistently from here on.
+
+3. `git fetch origin` to observe remote state.
+
+4. **Classify the work:**
+
+   | State | What to do |
+   |-------|------------|
+   | **Fresh ask, no pending changes** — Alex just asked you to do something from scratch | Proceed to step 5. You'll implement on `$DEFAULT_BRANCH` directly after the pull. |
+   | **Uncommitted changes on `$DEFAULT_BRANCH` already** | Proceed to step 5. You'll commit them after the pull. |
+   | **Uncommitted changes on a feature branch** | Commit them on that branch first with a clean message, then proceed to step 5. |
+   | **Committed on a local feature branch** (`feat/swe-<N>/...` or `fix/swe-<N>/...`) | Stay on it for now; you'll collapse it onto `$DEFAULT_BRANCH` in step 6. |
+   | **Unpushed commits already on local `$DEFAULT_BRANCH`** (from a prior aborted direct-commit attempt) | Stop and report — do NOT silently continue. Alex decides whether to resume or reset. |
+
+5. `git checkout "$DEFAULT_BRANCH" && git pull --ff-only`. If `--ff-only` fails because the default branch diverged from origin, **abort** — report the divergence to TPM with the exact error. Do NOT auto-rebase or merge non-linearly; Alex chooses how to reconcile.
+
+6. **Produce the final tree on `$DEFAULT_BRANCH`:**
+   - Fresh ask: implement the change directly in the working tree, then `git add` + `git commit` on `$DEFAULT_BRANCH` with a concise message.
+   - Uncommitted changes already staged/in-tree on `$DEFAULT_BRANCH`: `git add` + `git commit`.
+   - Feature branch strictly ahead and linear: `git merge --ff-only <branch>`.
    - Feature branch with multiple commits you want collapsed into one clean commit: `git merge --squash <branch> && git commit -m "<concise summary>"`.
-6. Run the project's test suite. If tests fail, **abort** — leave the remote `main` untouched and report the failures to TPM. Never ship red.
-7. `git push origin main`. If push fails (branch protection, required reviews, required status checks, permissions, etc.), **abort** — report the exact error to TPM. Do NOT disable hooks, do NOT force-push, do NOT work around branch protection. TPM will offer the PR fallback to Alex.
-8. Delete the now-obsolete local feature branch: `git branch -d <branch>` (only if you used one).
-9. Return to TPM with: the commit SHA(s) now on `main`, tests that ran, and a concise summary of what shipped.
+
+7. Run the project's test suite. If tests fail, **abort** — leave the remote untouched and report the failures to TPM. Never ship red. Alex saying "tests already ran" / "skip tests" does NOT authorize skipping this step — you re-run on the final tree.
+
+8. **Courtesy check for open human PRs** against `$DEFAULT_BRANCH`:
+
+   ```
+   gh pr list --base "$DEFAULT_BRANCH" --state open -R <owner>/<repo>
+   ```
+
+   If any non-agent PR is open, include a warning in your result — this direct push will likely force the human to rebase. Don't block on this; it's informational for Alex.
+
+9. `git push origin "$DEFAULT_BRANCH"`. If push fails (branch protection, required reviews, required status checks, permissions, etc.), **abort** — report the exact error to TPM. Do NOT disable hooks, do NOT force-push, do NOT work around branch protection. TPM will offer the PR fallback to Alex.
+
+10. Delete the now-obsolete local feature branch: `git branch -d <branch>` (only if you used one).
+
+11. Return to TPM with: commit SHA(s) now on `$DEFAULT_BRANCH`, tests that ran, a concise summary of what shipped, and any open-human-PR warning from step 8.
 
 **Never combine this flow with a PR.** If you find yourself calling `gh pr create` in direct-commit mode, stop — you've routed to the wrong flow.
 

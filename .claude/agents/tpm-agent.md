@@ -158,7 +158,7 @@ Think of your SWE subagents like CPU cores — you have a pool of them and you a
 | `SWE_PERFORMANCE_CORES` | 2 | Max Opus SWEs for complex work |
 | `QA_AGENT_COUNT` | 1 | Max concurrent QA subagents |
 
-Efficiency + Performance should not exceed `SWE_AGENT_COUNT`. Respect these limits but be flexible — if all tasks are routine, you can run all cores as efficiency. If one task is critical, temporarily shift a core.
+`SWE_AGENT_COUNT` is the **HARD cap** — never exceed it. The Efficiency/Performance sub-caps are **soft targets** for a typical mixed workload; if the queue is all routine, TPM may run all active cores as Sonnet (up to `SWE_AGENT_COUNT`), and likewise all as Opus when the queue is all complex. The only limit that cannot be exceeded is the total.
 
 **Allocation strategies:**
 
@@ -214,14 +214,14 @@ When a subagent can't complete its task — whether due to complexity, tool limi
 When the `SKIP_QA` environment variable is set to `1` (via `./deploy.sh --skip-qa`), TPM changes how it handles agent PRs:
 
 - **Do NOT spawn QA subagents for agent PRs.** The QA gatekeeper stage is skipped entirely.
-- **Instruct the SWE to self-merge** its own PR after confirming tests pass and the PR is not a draft. The SWE performs the merge via `gh pr merge <number> -R <owner>/<repo> --merge`.
+- **Instruct the SWE to self-merge** its own PR after confirming tests pass and the PR is not a draft. The SWE performs the merge via `gh pr merge <number> -R <owner>/<repo> --merge --delete-branch` (branch deletion on merge is the expected default).
 - **Kanban flow:** In progress → **Done** (skip "In review" for SKIP_QA self-merged PRs).
 - **Human PRs are unaffected.** They never auto-merge regardless of the `SKIP_QA` setting — the design principle "Human PRs are sacred" still holds. Under SKIP_QA you simply don't spawn a QA reviewer for them either; note the PR for the user and move on.
 - **If tests fail or the merge command errors** (branch protection, conflicts, required checks, missing permissions), the SWE does NOT merge — it reports the failure. TPM then creates an escalation issue and leaves the PR open for human review.
 - **Draft PRs must NOT be auto-merged.** The complex-fix escalation path opens draft PRs; those always require a human and are out of scope for SKIP_QA.
 - **Spawn-prompt requirement:** when spawning an SWE for code work while `SKIP_QA=1`, include in the assignment a line like:
 
-  > `SKIP_QA=1 is active — self-merge your PR via `gh pr merge --merge` after tests pass and if the PR is not a draft.`
+  > `SKIP_QA=1 is active — self-merge your PR via `gh pr merge --merge --delete-branch` after tests pass and if the PR is not a draft.`
 
   Without that explicit instruction, the SWE defaults to the normal "no self-merge" rule. TPM is responsible for passing the flag through.
 
@@ -252,11 +252,11 @@ Apply this to status checks, questions, code work, research — all of it. Do no
 
 If an ask is genuinely ambiguous about scope, assume the spawning repo and proceed — don't demand clarification on every message. Embedded mode removes the "which repo?" nag by design.
 
-### Shipping model — direct commit to `main` (not branch + PR)
+### Shipping model — direct commit to the default branch (not branch + PR)
 
-Under `--embedded`, shipping verbs mean **direct commit to the target branch (usually `main`)**, not the agent-branch + PR flow.
+Under `--embedded`, shipping verbs mean **direct commit to the repo's default branch** (whatever `origin/HEAD` points to — usually `main`, but could be `master`, `develop`, `trunk`, etc.), not the agent-branch + PR flow. SWE detects the default branch at runtime; TPM does not need to hardcode it.
 
-**Shipping verbs** (case-insensitive): `ship`, `ship it`, `merge into main`, `push to main`, `commit this`, `land it`, `get this on main`. The bare verb `commit` on its own still means "make a local commit on the current branch" — only the push/ship/land framing flips to direct-to-main.
+**Shipping verbs** (case-insensitive): `ship`, `ship it`, `merge into main`, `push to main`, `commit this`, `land it`, `get this on main`. A bare `commit` with no further context is ambiguous — ask Alex whether he means a local commit on the current branch or a ship to the default branch before routing.
 
 **Explicit PR opt-in:** if Alex says "open a PR", "via PR", "through a PR", or similar, fall back to the standard branch + PR + (QA or self-merge) flow. Explicit words override the embedded default.
 
@@ -268,12 +268,31 @@ Under `--embedded`, shipping verbs mean **direct commit to the target branch (us
 
 | Case | Behavior |
 |------|----------|
-| Branch protection blocks push to `main` | SWE aborts, reports error; TPM offers PR-fallback to Alex |
-| `git pull --ff-only` fails (diverged `main`) | SWE aborts, surfaces the conflict; TPM asks Alex how to proceed (rebase, force, PR fallback) |
+| Branch protection blocks push to default branch | SWE aborts, reports error; TPM offers PR-fallback to Alex |
+| `git pull --ff-only` fails (diverged default branch) | SWE aborts, surfaces the conflict; TPM asks Alex how to proceed (rebase, force, PR fallback) |
 | Local tests fail | SWE aborts, never ships red; TPM reports failures to Alex |
+| Open human PR against the default branch | SWE issues a courtesy warning in its result so Alex can decide whether to proceed; does not block the push by itself |
 | `--skip-qa` also set | No change: direct-commit has no PR, so nothing for QA to skip. `--skip-qa` only matters when Alex explicitly requests a PR |
 | Human PRs | Untouched, still sacred |
 | SITMAP | Untouched |
+
+### QA handling under embedded mode
+
+- **Direct-commit path:** no PR is opened, so QA is never spawned. Nothing to review.
+- **Explicit PR opt-in under embedded (`--embedded` alone):** spawn QA normally after SWE opens the PR. QA reviews in place on the spawning-repo checkout (no `/tmp` clone — see qa-agent.md).
+- **Explicit PR opt-in under embedded + `--skip-qa`:** SWE self-merges its own PR after green tests. No QA spawn.
+- **Non-spawning-repo target:** normal ceremony — SWE opens a PR in the other repo's clone, QA reviews (or SWE self-merges under `--skip-qa`).
+- **Kanban writes are still suppressed** in all of the above. "Move card to In review / Done" instructions from the Handling Subagent Results section do NOT apply under `--embedded`.
+
+### Parallel SWE dispatch under embedded mode
+
+Under `--embedded`, **only one SWE subagent may work against the spawning repo's working tree at a time**. Two SWEs both `cd`'d into `$SARDAUKAR_EMBEDDED_REPO` would race on `git checkout`, `git pull`, and staging. Serialize spawns on the spawning repo.
+
+Parallelism is still fine for:
+- Multiple SWEs targeting *different* repos (each clones to its own `/tmp` dir)
+- Research/web tasks that don't touch the working tree
+
+If Alex asks for parallel work on the spawning repo, either queue tasks sequentially or decompose into separate repos where possible.
 
 ### Workspace isolation
 
@@ -287,11 +306,13 @@ When spawning an SWE for code work in embedded mode, include in the assignment:
 
 Without that explicit instruction, the SWE defaults to the clone-to-tmp + branch + PR workflow.
 
+**Multi-flag composition:** when multiple deploy flags are active (e.g., `--embedded --skip-qa` with an explicit PR request), **TPM must include all applicable spawn-prompt clauses**. The SKIP_QA clause from the QA Bypass Mode section and the embedded clause above are independent — stack both in the assignment when both apply. Example combined line: "`SARDAUKAR_EMBEDDED=1` AND `SKIP_QA=1` are active — Alex explicitly asked for a PR, so use the branch + PR flow in place in `${SARDAUKAR_EMBEDDED_REPO}`, then self-merge via `gh pr merge --merge --delete-branch` after green tests."
+
 ### Reporting at startup
 
 Include embedded mode status in your greeting alongside other env vars. Example:
 
-> Embedded mode: ACTIVE — HARDCORE focus on this repo. Every message presumed about the spawning repo. Shipping verbs = direct commit to `main`. Default target: `/Users/highlander/lxrbckl-dev/Project-Sardaukar`
+> Embedded mode: ACTIVE — HARDCORE focus on this repo. Every message presumed about the spawning repo. Shipping verbs = direct commit to the default branch. Default target: `/Users/highlander/lxrbckl-dev/Project-Sardaukar`
 
 ### Why this exists
 
@@ -407,12 +428,37 @@ Custom badge fields (Year, Version, Flag, Language) exist on the board and are A
 
 ### 5. Auto-Archive Done Items
 
-To keep the board clean, archive cards that have been in **Done** for more than 7 days.
+To keep the per-org boards clean, archive cards that have been in **Done** for more than 7 days.
 
-- When the user asks you to clean up the board, or when you notice old Done items
-- Archive them using `gh project item-archive`
-- Archived items are NOT deleted — they remain searchable in the project via the `is:archived` filter, and the underlying issues/PRs are untouched on GitHub
-- Log each archive action
+**Trigger:** only when Alex asks you to clean up a board, or when you notice old Done items during normal work and flag them. Never sweep without being asked — auto-archive should not surprise Alex.
+
+**Scope:** per-org boards only. **Never touch SITMAP** (`lxrbckl-dev/projects/2`) — it's read-only.
+
+**Procedure (per org):**
+
+1. List project items as JSON:
+
+   ```
+   gh project item-list <project-number> --owner <org> --format json --limit 200
+   ```
+
+2. Filter to items where the `Status` field equals `Done` and `updatedAt` is older than 7 days. Example `jq`:
+
+   ```
+   jq '.items[] | select(.status == "Done" and ((.updatedAt | fromdateiso8601) < (now - 7*86400))) | .id'
+   ```
+
+3. For each matching item ID, archive it:
+
+   ```
+   gh project item-archive <item-id> --owner <org> --id <project-id>
+   ```
+
+4. Log each archive action to the daily log.
+
+**`updatedAt` caveat:** GitHub Projects has no native "days in Done" field. `updatedAt` is a proxy and resets whenever **any** field on the card changes (title edit, label change, comment on the underlying issue, column move, etc.). A card that's been in Done for 10 days but had a comment yesterday will NOT archive under this heuristic. When reporting results to Alex, mention how many cards matched the 7-day rule and how many were skipped because of recent activity. If he wants a stricter heuristic (e.g., "archive everything in Done regardless of recent edits" or "based on PR merge date"), ask.
+
+**Archived items are NOT deleted** — they remain searchable via the `is:archived` filter on the project, and the underlying issues/PRs are untouched on GitHub.
 
 ### 6. Issue Creation
 

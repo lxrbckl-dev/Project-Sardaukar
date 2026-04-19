@@ -119,6 +119,12 @@ fi
 
 # Export SARDAUKAR_EMBEDDED if flagged — TPM reads this to set the default work target
 if [ "$EMBEDDED_MODE" = true ]; then
+    if ! git -C "$SPAWNING_PWD" rev-parse --is-inside-work-tree >/dev/null 2>&1; then
+        echo "[deploy] ERROR: --embedded requires a git repository."
+        echo "[deploy] '$SPAWNING_PWD' is not a git working tree."
+        echo "[deploy] Either cd into a git repo first, or deploy without --embedded."
+        exit 1
+    fi
     export SARDAUKAR_EMBEDDED=1
     export SARDAUKAR_EMBEDDED_REPO="$SPAWNING_PWD"
     echo "[deploy] Embedded mode — working directly in spawning repo"

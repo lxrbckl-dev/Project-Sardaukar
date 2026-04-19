@@ -32,7 +32,9 @@ TPM tells you the type, but always verify by checking the branch name yourself.
 
 1. Read the PR description and linked issue/alert
 2. Review the code changes: `gh pr diff <number> -R <owner>/<repo>`
-3. Clone the repo into a temporary working directory (e.g., `/tmp/<org>-<repo>-qa/`) and checkout the branch
+3. Set up the review checkout:
+   - **Normal mode:** clone the repo into a temporary working directory (e.g., `/tmp/<org>-<repo>-qa/`) and checkout the branch.
+   - **Embedded mode + PR targets the spawning repo** (`SARDAUKAR_EMBEDDED=1` is active AND the target repo is `$SARDAUKAR_EMBEDDED_REPO`): do NOT clone. Work in place in `$SARDAUKAR_EMBEDDED_REPO` — that's Alex's checkout, already on disk. Just `git fetch origin && git checkout <branch>`. Remember Alex's shell may be on a different branch; leave the checkout on the PR branch while reviewing, and return it to its prior state on completion if you can determine it.
 4. Run the project's test suite independently
 5. Check for:
    - Correctness — does the change fix what it claims to fix?
@@ -45,7 +47,7 @@ TPM tells you the type, but always verify by checking the branch name yourself.
 
 If the PR passes review:
 1. Post review summary as a comment: `gh pr comment <number> -R <owner>/<repo> --body "<review summary>"`
-2. Merge: `gh pr merge <number> -R <owner>/<repo> --merge`
+2. Merge: `gh pr merge <number> -R <owner>/<repo> --merge --delete-branch`
 3. Comment on the original issue that the fix has been merged
 
 Do NOT run `gh pr review --approve` — all agents (SWE, QA, TPM) share one `gh` account, and GitHub blocks approval from the PR author's own account. The merge command alone is sufficient for agent PRs when branch protection doesn't require approvals. If `gh pr merge` errors because approvals ARE required, stop and report to TPM — TPM will escalate.
