@@ -108,7 +108,7 @@ Every invocation pulls the latest changes via `git pull --ff-only` first, then s
 | Remote control | `./deploy.sh --remote` | Connect from phone/browser at [claude.ai/code](https://claude.ai/code) |
 | Headless Playwright | `./deploy.sh --headless` | Hides the Playwright browser window; combinable |
 | Skip QA | `./deploy.sh --skip-qa` | Bypass QA; SWE self-merges agent PRs; combinable |
-| Embedded | `./deploy.sh --embedded` | Session-wide: no tickets or board churn for any repo; spawning repo is default target for ambiguous asks; combinable |
+| Embedded | `./deploy.sh --embedded` | HARDCORE focus on spawning repo: no tickets/board churn; every message presumed about spawning repo; shipping verbs (`ship`, `merge into main`, `land it`, etc.) = direct commit to `main` (no branch/PR); combinable |
 | Combined | `./deploy.sh --remote --headless --skip-qa --embedded` | Flags stack freely |
 
 There is no `--local` flag — local CLI is the default mode, and `--remote` opts into remote-control.
@@ -131,7 +131,7 @@ sardaukar                              # local CLI mode (default)
 sardaukar --remote                     # remote-control mode
 sardaukar --headless                   # local CLI + headless Playwright
 sardaukar --skip-qa                    # local CLI + skip QA (SWE self-merges)
-sardaukar --embedded                   # local CLI + embedded mode (no tickets/board churn)
+sardaukar --embedded                   # local CLI + embedded mode (HARDCORE: no tickets/board churn, shipping verbs = direct commit to main)
 sardaukar --remote --headless --skip-qa --embedded  # all flags stack
 ```
 

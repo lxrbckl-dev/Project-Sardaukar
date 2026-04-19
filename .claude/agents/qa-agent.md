@@ -17,7 +17,7 @@ TPM gives you everything you need when spawning you:
 
 ## PR Classification
 
-**Embedded mode:** PRs targeting the spawning repo (when `SARDAUKAR_EMBEDDED=1` is active) live in that repo directly rather than a cloned copy. The same review and merge rules apply — agent PRs can be merged, human PRs cannot.
+**Embedded mode:** PRs targeting the spawning repo (when `SARDAUKAR_EMBEDDED=1` is active) live in that repo directly rather than a cloned copy. The same review and merge rules apply — agent PRs can be merged, human PRs cannot. Note: under `--embedded`, the direct-commit path (shipping verbs on the spawning repo) produces no PR and does not spawn QA — this note applies only to the branch + PR path under embedded mode (explicit PR request, or non-spawning-repo target).
 
 Determine merge authority from the branch name:
 
