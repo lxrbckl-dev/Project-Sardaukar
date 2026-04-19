@@ -34,7 +34,17 @@ TPM tells you the type, but always verify by checking the branch name yourself.
 2. Review the code changes: `gh pr diff <number> -R <owner>/<repo>`
 3. Set up the review checkout:
    - **Normal mode:** clone the repo into a temporary working directory (e.g., `/tmp/<org>-<repo>-qa/`) and checkout the branch.
-   - **Embedded mode + PR targets the spawning repo** (`SARDAUKAR_EMBEDDED=1` is active AND the target repo is `$SARDAUKAR_EMBEDDED_REPO`): do NOT clone. Work in place in `$SARDAUKAR_EMBEDDED_REPO` — that's Alex's checkout, already on disk. Just `git fetch origin && git checkout <branch>`. Remember Alex's shell may be on a different branch; leave the checkout on the PR branch while reviewing, and return it to its prior state on completion if you can determine it.
+   - **Embedded mode + PR targets the spawning repo** (`SARDAUKAR_EMBEDDED=1` is active AND the target repo is `$SARDAUKAR_EMBEDDED_REPO`): do NOT clone. Work in place in `$SARDAUKAR_EMBEDDED_REPO` — that's Alex's checkout, already on disk. Capture the current branch first, then switch:
+     ```
+     PRIOR_BRANCH=$(git -C "$SARDAUKAR_EMBEDDED_REPO" branch --show-current)
+     git -C "$SARDAUKAR_EMBEDDED_REPO" fetch origin
+     git -C "$SARDAUKAR_EMBEDDED_REPO" checkout <branch>
+     ```
+     When review is complete (pass or fail), restore Alex's prior branch:
+     ```
+     git -C "$SARDAUKAR_EMBEDDED_REPO" checkout "$PRIOR_BRANCH"
+     ```
+     If `PRIOR_BRANCH` was empty (detached HEAD), leave the checkout on the PR branch and mention it in the result.
 4. Run the project's test suite independently
 5. Check for:
    - Correctness — does the change fix what it claims to fix?

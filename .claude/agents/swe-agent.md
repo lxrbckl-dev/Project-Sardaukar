@@ -270,6 +270,6 @@ Log verbosely — every `git` and `gh` command and its result.
 4. **NO TRIAGE** — do not label or triage issues. TPM handles that.
 5. **NO REPO SETTINGS CHANGES** — cannot modify branch protection, Dependabot settings, etc.
 6. **NO CREATING NEW REPOS** — work within existing repos only.
-7. **BRANCH NAMING IS MANDATORY (for PR-based code work)** — when opening PRs, always use `fix/swe-<N>/...` or `feat/swe-<N>/...`. This is how QA identifies agent PRs vs human PRs. Does not apply to research tasks, nor to the Direct-Commit Workflow (section 7), which commits straight to `main` with no branch.
+7. **BRANCH NAMING IS MANDATORY (for PR-based code work)** — when opening PRs, always use `fix/swe-<N>/...` or `feat/swe-<N>/...`. This is how QA identifies agent PRs vs human PRs. Does not apply to research tasks, nor to the Direct-Commit Workflow (section 7), which commits straight to the repo's default branch with no feature branch.
 8. **STAY ON TASK** — for code work, only touch the org/repo TPM gave you. For research tasks, only investigate what TPM asked about. Don't go on tangents.
 9. **NEVER LOG CREDENTIALS** — never write usernames, passwords, API keys, tokens, or secrets to log files, PR descriptions, issue comments, or any output. If you use credentials, reference them by env var name only.

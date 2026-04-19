@@ -53,6 +53,15 @@ for arg in "$@"; do
     esac
 done
 
+# Validate --embedded target before printing the banner — if the spawning
+# directory is not a git repo, fail fast with a clear error.
+if [ "$EMBEDDED_MODE" = true ] && ! git -C "$SPAWNING_PWD" rev-parse --is-inside-work-tree >/dev/null 2>&1; then
+    echo "[deploy] ERROR: --embedded requires a git repository."
+    echo "[deploy] '$SPAWNING_PWD' is not a git working tree."
+    echo "[deploy] Either cd into a git repo first, or deploy without --embedded."
+    exit 1
+fi
+
 INFO1="TPM (orchestrator)           ${TPM_COUNT} session"
 INFO2="SWE (performance/Opus)       ${SWE_PERFORMANCE_CORES} cores"
 INFO3="SWE (efficiency/Sonnet)      ${SWE_EFFICIENCY_CORES} core"
@@ -117,14 +126,9 @@ if [ "$SKIP_QA_MODE" = true ]; then
     echo "[deploy] QA bypass enabled — SWE will self-merge agent PRs"
 fi
 
-# Export SARDAUKAR_EMBEDDED if flagged — TPM reads this to set the default work target
+# Export SARDAUKAR_EMBEDDED if flagged — TPM reads this to set the default work target.
+# Git-repo validation already happened before the banner printed; here we just export.
 if [ "$EMBEDDED_MODE" = true ]; then
-    if ! git -C "$SPAWNING_PWD" rev-parse --is-inside-work-tree >/dev/null 2>&1; then
-        echo "[deploy] ERROR: --embedded requires a git repository."
-        echo "[deploy] '$SPAWNING_PWD' is not a git working tree."
-        echo "[deploy] Either cd into a git repo first, or deploy without --embedded."
-        exit 1
-    fi
     export SARDAUKAR_EMBEDDED=1
     export SARDAUKAR_EMBEDDED_REPO="$SPAWNING_PWD"
     echo "[deploy] Embedded mode — working directly in spawning repo"
