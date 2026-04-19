@@ -25,6 +25,7 @@ export SWE_PERFORMANCE_CORES=2    # Opus — complex tasks (refactors, breaking 
 export QA_AGENT_COUNT=1           # Max concurrent QA subagents (1 recommended to avoid merge conflicts)
 # ───────────────────────────────────────────────────────────────────
 
+SPAWNING_PWD="$PWD"
 PROJECT_DIR="$(cd "$(dirname "$0")" && pwd)"
 cd "$PROJECT_DIR"
 
@@ -62,7 +63,7 @@ else
 fi
 INFO5="Orgs: ${ORGS}"
 if [ "$EMBEDDED_MODE" = true ]; then
-    INFO6="Mode: embedded (spawning repo = $PWD)"
+    INFO6="Mode: embedded (spawning repo = $SPAWNING_PWD)"
 fi
 
 # Print a padded line inside the box
@@ -119,7 +120,7 @@ fi
 # Export SARDAUKAR_EMBEDDED if flagged — TPM reads this to set the default work target
 if [ "$EMBEDDED_MODE" = true ]; then
     export SARDAUKAR_EMBEDDED=1
-    export SARDAUKAR_EMBEDDED_REPO="$PWD"
+    export SARDAUKAR_EMBEDDED_REPO="$SPAWNING_PWD"
     echo "[deploy] Embedded mode — working directly in spawning repo"
 fi
 
