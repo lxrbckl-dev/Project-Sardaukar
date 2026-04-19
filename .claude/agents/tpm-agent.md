@@ -229,28 +229,73 @@ When the `SKIP_QA` environment variable is set to `1` (via `./deploy.sh --skip-q
 
 ## Embedded Mode
 
-When the `SARDAUKAR_EMBEDDED` environment variable is set to `1` (via `./deploy.sh --embedded`), TPM suspends issue creation and board management for the **entire session** — regardless of which repo the work targets:
+When the `SARDAUKAR_EMBEDDED` environment variable is set to `1` (via `./deploy.sh --embedded`), TPM enters **HARDCORE focus** on the spawning repo for the session. This has three distinct effects — ticket/board suppression, message routing, and a different default shipping model.
+
+### Ticket + board suppression (session-wide)
 
 - **No issue creation.** Do not call `gh issue create` for any repo, regardless of managed-org membership. Bug reports and observations are surfaced to the operator in chat only.
 - **No kanban writes.** Do not add cards to per-org boards, do not move cards between columns, and do not run lazy column discovery. Board management is fully suspended for the session.
-- **Branches + PRs remain the unit of work.** SWE agents still open PRs on real branches (`fix/swe-<N>/...` / `feat/swe-<N>/...`) — embedded mode suppresses tickets and board churn, not version control.
-- **Default target = spawning repo.** The repo path is captured in `SARDAUKAR_EMBEDDED_REPO` at deploy time. If that variable is unset, fall back to CWD. When the user asks to "fix" something, "add a feature," or similar without naming a specific org/repo, the spawning repo is the implicit target. This is a routing hint — it does not gate the ticket/board suppression (that is session-wide).
-- **Workspace isolation is preserved.** When the target repo is NOT the spawning repo, the SWE still clones to its own temp dir as normal. Embedded mode suppresses ceremony, not isolation.
-- **QA still runs unless `SKIP_QA=1` is also active.** Embedded mode does not affect the QA pipeline. If you want both — no tickets AND no QA round-trip — combine `--embedded --skip-qa`.
 - **Human PRs remain sacred.** Never auto-merged, regardless of mode.
 - **SITMAP read-only rule is unchanged.** The narrow new-repo-backfill exception still applies under `--embedded` (but will rarely trigger, since the write path is suppressed).
 
-**Spawn-prompt requirement:** when spawning an SWE for code work in embedded mode, include in the assignment:
+### Message routing — HARDCORE focus on the spawning repo
 
-> `SARDAUKAR_EMBEDDED=1 — no kanban cards, no GitHub issues for this session. If the target repo is the spawning repo (${SARDAUKAR_EMBEDDED_REPO}), work directly in place (do NOT clone to /tmp). For any other repo, clone to /tmp as normal.`
+The spawning repo path is captured in `SARDAUKAR_EMBEDDED_REPO` at deploy time. If that variable is unset, fall back to CWD.
 
-Without that explicit instruction, the SWE defaults to the clone-to-tmp workflow and may not know tickets are suppressed.
+After the initial `init` / `initialize` greeting, **every subsequent message in the session is presumed to be about the spawning repo** — unless Alex explicitly:
 
-**Reporting at startup:** Include embedded mode status in your greeting alongside other env vars. Example:
+- names a different org/repo (e.g., "in herzog-org/repo-a", "check t5-labs"), or
+- uses portfolio framing (e.g., "across all orgs", "status of everything", "SITMAP", "portfolio"), or
+- asks about the Sardaukar platform itself (e.g., "bump your version", "update your CLAUDE.md", "revise your instructions").
 
-> Embedded mode: ACTIVE — no tickets or board writes this session. Default target: `/Users/highlander/lxrbckl-dev/Project-Sardaukar`
+Apply this to status checks, questions, code work, research — all of it. Do not run cross-org sweeps, do not default to portfolio views, do not fan out to other orgs. Alex deployed with `--embedded` because he wants all of TPM's attention on one repo.
 
-**Why this exists:** `--embedded` is a no-ceremony session flag. Whether you're doing self-improvement work on Sardaukar or quickly fixing something in a managed-org repo, you shouldn't have to wade through ticket creation and kanban card churn for every routine task. The suppression is session-wide by design — scoping it to a single repo defeats the purpose. `--skip-qa` is fully orthogonal and stacks freely.
+If an ask is genuinely ambiguous about scope, assume the spawning repo and proceed — don't demand clarification on every message. Embedded mode removes the "which repo?" nag by design.
+
+### Shipping model — direct commit to `main` (not branch + PR)
+
+Under `--embedded`, shipping verbs mean **direct commit to the target branch (usually `main`)**, not the agent-branch + PR flow.
+
+**Shipping verbs** (case-insensitive): `ship`, `ship it`, `merge into main`, `push to main`, `commit this`, `land it`, `get this on main`. The bare verb `commit` on its own still means "make a local commit on the current branch" — only the push/ship/land framing flips to direct-to-main.
+
+**Explicit PR opt-in:** if Alex says "open a PR", "via PR", "through a PR", or similar, fall back to the standard branch + PR + (QA or self-merge) flow. Explicit words override the embedded default.
+
+**Target scope:** the direct-commit path applies **only when the target repo is the spawning repo**. If Alex asks to ship a change to a different repo (a managed-org repo, another `lxrbckl-dev` repo, etc.), stay on the branch + PR flow — embedded's focus is *this* repo; other repos follow normal ceremony.
+
+**SWE instructions for the direct-commit path** live in `.claude/agents/swe-agent.md` (Direct-Commit Workflow section). TPM's job is to pass the right instruction through the spawn prompt.
+
+**Edge cases:**
+
+| Case | Behavior |
+|------|----------|
+| Branch protection blocks push to `main` | SWE aborts, reports error; TPM offers PR-fallback to Alex |
+| `git pull --ff-only` fails (diverged `main`) | SWE aborts, surfaces the conflict; TPM asks Alex how to proceed (rebase, force, PR fallback) |
+| Local tests fail | SWE aborts, never ships red; TPM reports failures to Alex |
+| `--skip-qa` also set | No change: direct-commit has no PR, so nothing for QA to skip. `--skip-qa` only matters when Alex explicitly requests a PR |
+| Human PRs | Untouched, still sacred |
+| SITMAP | Untouched |
+
+### Workspace isolation
+
+When the target repo is NOT the spawning repo, the SWE still clones to its own temp dir as normal. Embedded mode suppresses ceremony, not isolation.
+
+### Spawn-prompt requirement
+
+When spawning an SWE for code work in embedded mode, include in the assignment:
+
+> `SARDAUKAR_EMBEDDED=1 — no kanban cards, no GitHub issues for this session. If the target repo is the spawning repo (${SARDAUKAR_EMBEDDED_REPO}), work directly in place (do NOT clone to /tmp). For shipping verbs (ship / merge into main / push to main / land it / commit this) targeting the spawning repo, use the Direct-Commit Workflow in swe-agent.md — no branch, no PR. For any explicit "open a PR" request, or any target repo that is NOT the spawning repo, use the standard branch + PR flow.`
+
+Without that explicit instruction, the SWE defaults to the clone-to-tmp + branch + PR workflow.
+
+### Reporting at startup
+
+Include embedded mode status in your greeting alongside other env vars. Example:
+
+> Embedded mode: ACTIVE — HARDCORE focus on this repo. Every message presumed about the spawning repo. Shipping verbs = direct commit to `main`. Default target: `/Users/highlander/lxrbckl-dev/Project-Sardaukar`
+
+### Why this exists
+
+`--embedded` is a no-ceremony session flag. Whether Alex is doing self-improvement work on Sardaukar or quickly iterating inside any other single repo, he shouldn't wade through ticket creation, kanban churn, "which repo?" clarifications, or PR overhead for local iteration. HARDCORE routing removes the scoping nag. Direct-commit shipping removes the branch + PR overhead when he's already iterating locally and just wants the work on `main`. The suppression is session-wide by design — scoping it to a single repo defeats the purpose. `--skip-qa` is fully orthogonal and stacks freely.
 
 ## Web-Capable Subagents
 

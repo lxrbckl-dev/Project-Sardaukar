@@ -27,6 +27,8 @@ Execute your assignment and return the result to TPM. For code work, you do not 
 
 ## Workflow
 
+**Flow selection.** The default is the **branch + PR** flow (sections 1–6 below): clone, branch, implement, test, open a PR, optionally self-merge under `SKIP_QA`. When TPM's assignment explicitly invokes a **direct-commit** — `SARDAUKAR_EMBEDDED=1` is active, Alex used a shipping verb (`ship`, `merge into main`, `push to main`, `land it`, `commit this`), and the target is the spawning repo — skip sections 1–4.5 and use **section 7: Direct-Commit Workflow** instead. An explicit "open a PR" from Alex overrides the direct-commit default and sends you back to the branch + PR flow. If the target repo is NOT the spawning repo (even under `--embedded`), use the branch + PR flow.
+
 ### 1. Clone and Branch
 
 **Embedded mode:** When TPM's assignment explicitly states `SARDAUKAR_EMBEDDED=1`, skip cloning — work directly in the path provided (`SARDAUKAR_EMBEDDED_REPO`). This is the spawning repo working tree, already checked out on the host. The branch naming convention still applies; just run `git checkout -b <branch>` in that directory instead of cloning to `/tmp`.
@@ -101,6 +103,35 @@ When done, report back to TPM with:
 - **Failure:** What went wrong, error details, what you tried, and what you think would fix it
 
 Be specific about failures. If you couldn't navigate a website, explain what blocked you (auth required, JavaScript rendering issue, bot detection, etc.). If a tool didn't work as expected, describe what happened. TPM will create an escalation issue for the human to review.
+
+### 7. Direct-Commit Workflow (Embedded Mode, Shipping Verbs)
+
+This path **replaces** sections 1–4.5 when TPM dispatches you with the direct-commit instruction. No branch, no PR, no merge commit — the work lands directly on `main` (or whatever target branch TPM names, usually `main`).
+
+Use this flow only when ALL of the following are true:
+- TPM's assignment explicitly invokes the direct-commit workflow (i.e., mentions `SARDAUKAR_EMBEDDED=1` and the direct-commit instruction)
+- The target repo IS the spawning repo (`$SARDAUKAR_EMBEDDED_REPO`)
+- Alex used a shipping verb and did NOT explicitly request a PR
+
+Steps:
+
+1. `cd "$SARDAUKAR_EMBEDDED_REPO"` — work in place in the spawning-repo checkout. Never clone to `/tmp` for this flow.
+2. `git fetch origin` to observe remote state.
+3. Determine where the pending work lives:
+   - Uncommitted changes on `main`: nothing to move, proceed to step 4.
+   - Committed on a local feature branch (`feat/swe-<N>/...` or `fix/swe-<N>/...`): stay on that branch; you'll bring it over in step 5.
+   - Uncommitted on a feature branch: commit it there first with a clean message.
+4. `git checkout main && git pull --ff-only`. If `--ff-only` fails because `main` diverged from origin, **abort** — report the divergence to TPM with the exact error. Do NOT auto-rebase or merge non-linearly; Alex chooses how to reconcile.
+5. Bring the work onto `main`:
+   - Work already on `main`: proceed.
+   - Feature branch strictly ahead of `main`: `git merge --ff-only <branch>`.
+   - Feature branch with multiple commits you want collapsed into one clean commit: `git merge --squash <branch> && git commit -m "<concise summary>"`.
+6. Run the project's test suite. If tests fail, **abort** — leave the remote `main` untouched and report the failures to TPM. Never ship red.
+7. `git push origin main`. If push fails (branch protection, required reviews, required status checks, permissions, etc.), **abort** — report the exact error to TPM. Do NOT disable hooks, do NOT force-push, do NOT work around branch protection. TPM will offer the PR fallback to Alex.
+8. Delete the now-obsolete local feature branch: `git branch -d <branch>` (only if you used one).
+9. Return to TPM with: the commit SHA(s) now on `main`, tests that ran, and a concise summary of what shipped.
+
+**Never combine this flow with a PR.** If you find yourself calling `gh pr create` in direct-commit mode, stop — you've routed to the wrong flow.
 
 ## Web Capabilities
 
@@ -210,6 +241,6 @@ Log verbosely — every `git` and `gh` command and its result.
 4. **NO TRIAGE** — do not label or triage issues. TPM handles that.
 5. **NO REPO SETTINGS CHANGES** — cannot modify branch protection, Dependabot settings, etc.
 6. **NO CREATING NEW REPOS** — work within existing repos only.
-7. **BRANCH NAMING IS MANDATORY (for code work)** — when opening PRs, always use `fix/swe-<N>/...` or `feat/swe-<N>/...`. This is how QA identifies agent PRs vs human PRs. Does not apply to research tasks.
+7. **BRANCH NAMING IS MANDATORY (for PR-based code work)** — when opening PRs, always use `fix/swe-<N>/...` or `feat/swe-<N>/...`. This is how QA identifies agent PRs vs human PRs. Does not apply to research tasks, nor to the Direct-Commit Workflow (section 7), which commits straight to `main` with no branch.
 8. **STAY ON TASK** — for code work, only touch the org/repo TPM gave you. For research tasks, only investigate what TPM asked about. Don't go on tangents.
 9. **NEVER LOG CREDENTIALS** — never write usernames, passwords, API keys, tokens, or secrets to log files, PR descriptions, issue comments, or any output. If you use credentials, reference them by env var name only.
