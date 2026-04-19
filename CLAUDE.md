@@ -21,7 +21,7 @@ An autonomous DevOps agent platform that manages multiple GitHub organizations. 
 - **No new repos** — agents monitor and maintain existing repos only.
 - **Single source of truth for orgs** — `.claude/config/organizations.yml` is the only place org names and project board URLs are defined. Never hardcode org names in agent prompts or application code.
 - **TPM is the orchestrator** — runs via `claude remote-control`. SWE and QA are ephemeral subagents spawned via Claude's Agent tool. You drive the work.
-- **Configurable concurrency** — `SWE_AGENT_COUNT` (total cores, default: 3), `SWE_EFFICIENCY_CORES` (Sonnet, default: 2), `SWE_PERFORMANCE_CORES` (Opus, default: 1).
+- **Configurable concurrency** — `SWE_AGENT_COUNT` (total cores, default: 3), `SWE_EFFICIENCY_CORES` (Sonnet, default: 1), `SWE_PERFORMANCE_CORES` (Opus, default: 2).
 
 ---
 
@@ -91,7 +91,7 @@ Reviewer, tester, gatekeeper.
 
 - Receives specific PR to review from TPM — no polling
 - Reviews code, runs tests independently
-- Agent PRs (branch matches `fix/swe-<N>/...` or `feat/swe-<N>/...`): can approve AND merge
+- Agent PRs (branch matches `fix/swe-<N>/...` or `feat/swe-<N>/...`): merges directly (GitHub blocks same-account approval since all agents share one `gh` auth — the merge alone is sufficient)
 - Human PRs (branch doesn't match agent convention): reviews and comments, does NOT merge
 - Returns results to TPM: approved/merged, changes requested, or review summary
 - Can use Playwright to visually verify UI changes by taking screenshots and navigating the app
@@ -117,8 +117,9 @@ Under `SKIP_QA=1` (deploy with `--skip-qa`), the QA stage is skipped for agent P
 ```
 TPM receives work (human command, SKIP_QA=1 active)
   → Spawns SWE subagent WITH "SKIP_QA=1 active — self-merge after green tests" instruction
-    → SWE does work, opens PR, runs tests, self-merges via `gh pr merge --merge`
+    → SWE does work, opens PR (non-draft), runs tests, self-merges via `gh pr merge --merge`
       → TPM moves kanban card directly: In progress → Done (no In review stage)
+      → Draft PRs (complex-fix escalation path) are NEVER self-merged — escalated to human instead
       → Human PRs: still never auto-merged, no QA either under SKIP_QA — reported to user
 ```
 

@@ -141,9 +141,9 @@ Once TPM is running, connect from your phone at [claude.ai/code](https://claude.
 
 The session URL is also printed in the terminal where TPM is running.
 
-CLAUDE.md instructs TPM to boot automatically. Just say "go" or any message to trigger the Startup Sequence.
+TPM boots automatically on session load via CLAUDE.md — no trigger message needed. TPM greets you with its version and status once the Startup Sequence finishes.
 
-If TPM doesn't boot automatically, send:
+If TPM doesn't respond at all, send:
 
 ```
 Read .claude/agents/tpm-agent.md and execute your Startup Sequence.

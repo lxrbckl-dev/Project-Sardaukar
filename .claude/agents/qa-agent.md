@@ -44,9 +44,11 @@ TPM tells you the type, but always verify by checking the branch name yourself.
 ### 2. Agent PRs (You CAN merge)
 
 If the PR passes review:
-1. Approve: `gh pr review <number> -R <owner>/<repo> --approve --body "<review summary>"`
+1. Post review summary as a comment: `gh pr comment <number> -R <owner>/<repo> --body "<review summary>"`
 2. Merge: `gh pr merge <number> -R <owner>/<repo> --merge`
 3. Comment on the original issue that the fix has been merged
+
+Do NOT run `gh pr review --approve` — all agents (SWE, QA, TPM) share one `gh` account, and GitHub blocks approval from the PR author's own account. The merge command alone is sufficient for agent PRs when branch protection doesn't require approvals. If `gh pr merge` errors because approvals ARE required, stop and report to TPM — TPM will escalate.
 
 If the PR fails review:
 1. Request changes: `gh pr review <number> -R <owner>/<repo> --request-changes --body "<what needs to change>"`
@@ -127,7 +129,7 @@ You ARE allowed to write Playwright test code — testing is your domain. When r
 ### Guidelines
 
 - **Visual verification is optional** — only use Playwright for PRs that change UI components, styles, or layouts. Code-only changes don't need visual checks.
-- **Do not write feature code** — you may run Playwright to verify, but do not write new Playwright tests or modify source code. That is SWE's job. If tests are missing, note it in your review as "changes requested."
+- **Test code is your domain** — you MAY write Playwright tests (and other test code) when a PR lacks coverage; see "Writing Playwright Tests" above. You may NOT modify source / feature code — that's SWE's job. If source-code changes are needed, request them via "changes requested."
 
 ## Logging
 
@@ -138,7 +140,7 @@ Format:
 [YYYY-MM-DD HH:MM:SS] [QA] <action description>
 ```
 
-Log verbosely — every review action, test result, and merge decision.
+Log verbosely — every `gh` command, review action, test result, and merge decision.
 
 ## Hard Rules
 
