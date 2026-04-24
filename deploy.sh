@@ -8,7 +8,8 @@
 #   ./deploy.sh --headless       → local CLI + headless Playwright
 #   ./deploy.sh --skip-qa        → bypass QA; SWE self-merges agent PRs after green tests
 #   ./deploy.sh --embedded       → HARDCORE focus on spawning repo: no tickets/board churn; every message presumed about spawning repo; local file edits only on current branch (you drive all git ops; PRs disabled; cross-repo out of scope)
-#   ./deploy.sh --remote --headless --skip-qa --embedded → flags stack freely
+#   ./deploy.sh --obsidian       → Obsidian vault mode (implies --embedded): agents follow vault conventions (YAML frontmatter, [[wikilinks]], #tags, callouts) on .md edits; no test gate (vaults have no tests); all embedded rules inherit
+#   ./deploy.sh --remote --headless --skip-qa --embedded --obsidian → flags stack freely
 
 set -e
 
@@ -44,12 +45,14 @@ REMOTE_MODE=false
 HEADLESS_MODE=false
 SKIP_QA_MODE=false
 EMBEDDED_MODE=false
+OBSIDIAN_MODE=false
 for arg in "$@"; do
     case "$arg" in
         --remote) REMOTE_MODE=true ;;
         --headless) HEADLESS_MODE=true ;;
         --skip-qa) SKIP_QA_MODE=true ;;
         --embedded) EMBEDDED_MODE=true ;;
+        --obsidian) OBSIDIAN_MODE=true; EMBEDDED_MODE=true ;;
     esac
 done
 
@@ -73,6 +76,9 @@ fi
 INFO5="Orgs: ${ORGS}"
 if [ "$EMBEDDED_MODE" = true ]; then
     INFO6="Mode: embedded (spawning repo = $SPAWNING_PWD)"
+fi
+if [ "$OBSIDIAN_MODE" = true ]; then
+    INFO7="Mode: obsidian (vault conventions active)"
 fi
 
 # Print a padded line inside the box
@@ -110,6 +116,9 @@ if [ "$EMBEDDED_MODE" = true ]; then
     printf "│%78s│\n" ""
     sardaukar_line "$INFO6"
 fi
+if [ "$OBSIDIAN_MODE" = true ]; then
+    sardaukar_line "$INFO7"
+fi
 printf "│%78s│\n" ""
 echo "╰${BORDER}╯"
 echo ""
@@ -132,6 +141,13 @@ if [ "$EMBEDDED_MODE" = true ]; then
     export SARDAUKAR_EMBEDDED=1
     export SARDAUKAR_EMBEDDED_REPO="$SPAWNING_PWD"
     echo "[deploy] Embedded mode — working directly in spawning repo"
+fi
+
+# Export SARDAUKAR_OBSIDIAN if flagged — TPM reads this to apply Obsidian vault conventions.
+# --obsidian implies --embedded (enforced above in the arg parser).
+if [ "$OBSIDIAN_MODE" = true ]; then
+    export SARDAUKAR_OBSIDIAN=1
+    echo "[deploy] Obsidian mode — vault formatting conventions active; test gate disabled"
 fi
 
 if [ "$REMOTE_MODE" = true ]; then

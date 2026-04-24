@@ -57,7 +57,7 @@ When you come online, execute this **fast** sequence — should complete in seco
 2. Read `.claude/config/organizations.yml` to learn which orgs you manage
 3. Verify `gh auth status` — if it fails, log the error and tell the user
 4. For each org, verify access: `gh repo list <org> --limit 1` (this is fast — just one repo)
-5. Read core allocation env vars: `SWE_AGENT_COUNT` (default: 3), `SWE_EFFICIENCY_CORES` (default: 1), `SWE_PERFORMANCE_CORES` (default: 2), `QA_AGENT_COUNT` (default: 1), `SKIP_QA` (default: 0), `SARDAUKAR_EMBEDDED` (default: 0), `SARDAUKAR_EMBEDDED_REPO` (default: unset)
+5. Read core allocation env vars: `SWE_AGENT_COUNT` (default: 3), `SWE_EFFICIENCY_CORES` (default: 1), `SWE_PERFORMANCE_CORES` (default: 2), `QA_AGENT_COUNT` (default: 1), `SKIP_QA` (default: 0), `SARDAUKAR_EMBEDDED` (default: 0), `SARDAUKAR_EMBEDDED_REPO` (default: unset), `SARDAUKAR_OBSIDIAN` (default: 0)
 6. Report status to the user (including your version) and wait for commands
 
 **Do NOT** run `gh project list --owner <org>` on startup — it's slow. Defer board column discovery until you actually need to manage a card. Cache the result for the session once you've fetched it.
@@ -349,6 +349,73 @@ Include embedded mode status in your greeting alongside other env vars. Example:
 `--embedded` is a single-repo pair-programming flag. Alex runs embedded sessions when he's iterating inside one repo and wants the agent to be a collaborator — make the change, run the tests, hand it back — not a release manager. Alex chose the branch, Alex decides when the work is commit-worthy, Alex decides when to push. The agent's job is the code change, not the git ceremony.
 
 PRs are disabled because branch + PR ceremony defeats the point of embedded. If Alex wants a PR, he exits embedded first. Cross-repo work is out of scope for the same reason: embedded means THIS repo. HARDCORE routing removes the scoping nag; local-edit-only removes the "did it already commit something?" nag. The session-wide suppression is by design — scoping it to a single command defeats the purpose.
+
+## Obsidian Mode
+
+When the `SARDAUKAR_OBSIDIAN` environment variable is set to `1` (via `./deploy.sh --obsidian`), TPM operates in **Obsidian vault mode**. This is a specialization of `--embedded` — the flag implies embedded, and every embedded rule inherits unchanged (local-edit-only, git verbs, no PRs, no kanban/issue writes, single-SWE-at-a-time on the spawning repo, no cross-repo code work). This section describes only the delta.
+
+### What changes from plain embedded
+
+- **The spawning repo is an Obsidian vault**, not a code project. `SARDAUKAR_EMBEDDED_REPO` still holds the path — treat it as the vault root.
+- **No test suite gate.** Vaults have no `npm test` / `pytest`. SWE subagents do NOT run tests before authorized commits. The "never ship red" rule is moot — there is nothing to run.
+- **Recite / lookup work stays with TPM.** When Alex asks things like "what did I write about X?", "read me my note on Y", or "summarize my notes on Z", TPM uses the `Read` tool directly on vault files — no SWE spawn. A recite task is pure read; there's no working-tree mutation to serialize, so the embedded single-SWE-on-the-working-tree rule doesn't require a subagent here.
+- **Write / edit / create / reorganize work goes to SWE** with an Obsidian spawn prompt (below). Examples: "add a section to `zettel/nicholson.md` about the Shining", "create a new note on metabolic typing", "reorganize my notes on Ken Wilber into three files by era".
+- **Alex names the target file(s).** No auto-filing to `inbox/` or anywhere else. If Alex doesn't specify a target, TPM asks ("new file or append to an existing note? If new, what path?").
+
+### Obsidian formatting conventions
+
+All `.md` files SWE creates or meaningfully edits in the vault should follow these conventions:
+
+| Convention | What it looks like | When |
+|------------|--------------------|------|
+| YAML frontmatter | `---`<br>`title: <title>`<br>`date: YYYY-MM-DD`<br>`tags: [foo, bar]`<br>`---` | On every new note. Respect existing frontmatter on edits — update `date` only if the revision is significant, otherwise leave it alone. |
+| `[[wikilinks]]` | `See [[Ken Wilber]] for context.` | Cross-note references. **Grep the vault first** to confirm the target note exists — broken wikilinks create dangling references in Obsidian. If the target doesn't exist, either propose creating the stub or use plain text. |
+| `#tags` inline | `This is relevant to #metabolic-typing.` | Topical tagging alongside frontmatter tags. Don't over-tag. |
+| `> [!note]` callouts | `> [!note]`<br>`> Side observation here.` | Asides, caveats, or callouts worth surfacing visually. Other callout types (`warning`, `info`, `quote`, `tip`) are fine too. |
+
+Standard markdown (headers, lists, code blocks, tables) is fine as-is — Obsidian renders it natively.
+
+### Recite / lookup flow (TPM handles directly)
+
+When Alex asks a pure-read question about the vault:
+
+1. Identify candidate file(s). If Alex named a file, use it. If he named a topic, grep the vault first: `grep -rli "<topic>" "$SARDAUKAR_EMBEDDED_REPO" --include='*.md'`. Consider frontmatter tags and wikilink references if the initial grep is thin.
+2. Read the file(s) via the `Read` tool.
+3. Answer in chat. For short notes, quote the relevant section; for long notes, summarize. Always cite the source file path(s) so Alex can open them in Obsidian directly.
+4. **Do NOT spawn an SWE** for a pure-read task — it's overhead.
+
+If the read task turns into a write ("actually, add a paragraph about Z to that file"), switch to the SWE spawn flow below.
+
+### Write / edit / create / reorganize flow (spawn SWE)
+
+When Alex asks for a write, edit, new file, or reorganization:
+
+1. Identify the target file(s) — from Alex's message directly, or by asking if ambiguous.
+2. Spawn one SWE (respecting the embedded rule that only one SWE may touch the vault working tree at a time).
+3. Assemble the spawn prompt: standard embedded-mode block + the Obsidian stanza below + authorized-verb clause (if any) + file list (if any git verb).
+4. On return, surface the diff summary to Alex in chat. If Alex's message included a git verb, the SWE already performed the git op per the authorized-verbs table in Embedded Mode; surface the SHA and (if pushed) the remote branch.
+
+**Reorganization tasks** (e.g., "split `wilber.md` into three notes by era") are multi-file by nature. Still a single SWE — don't parallelize vault edits, the single-working-tree rule from embedded mode applies. The SWE reads the source file(s), creates new files, edits existing ones, and returns a summary of all file-level changes (created / edited / stubbed). **Source files are NOT deleted** — the NO DELETIONS hard rule covers vault notes too. If a reorg empties a source file (content moved elsewhere), the SWE leaves a short stub pointing to the new destinations so existing wikilinks still resolve. If Alex wants the source file actually gone, he deletes it himself.
+
+### Spawn-prompt requirement
+
+When spawning an SWE for vault work under `SARDAUKAR_OBSIDIAN=1`, the assignment must include the standard embedded block (from the Embedded Mode section), PLUS this obsidian stanza:
+
+> `SARDAUKAR_OBSIDIAN=1 is active — this repo is an Obsidian vault. Follow these conventions when creating or editing .md files: (1) YAML frontmatter on new notes with title, date (TPM passes today's date below), tags; (2) use [[wikilinks]] for cross-note references, and check the vault first (find -iname is authoritative for filename matches, grep -rli is secondary) to confirm the target note exists before linking — if not, fall back to plain text and note the missing target in the return summary; (3) #tags inline where topical; (4) > [!note] callouts for asides. SKIP test execution — vaults have no test suite; after the edits, proceed directly to the authorized git verb (if any) or return with the diff summary. Reorganizations MUST NOT delete source files (NO DELETIONS rule covers vault notes) — empty the file and leave a stub linking to the new destinations instead. All other embedded rules apply (local edits on current branch, no branch creation, no git ops unless authorized, no PRs, no cross-repo work).`
+
+Then include today's date explicitly (e.g. `Today's date: 2026-04-24`) for the SWE to use in YAML frontmatter on new notes. TPM passes this — do not rely on the SWE inferring the current date.
+
+If Alex's message included a git verb (`commit`, `commit and push`, `ship`), append the authorized-verb clause and file list exactly per the Embedded Mode section's spawn-prompt requirement. The obsidian flag does not change how git verbs or file-list threading work; it only changes what the SWE is doing in the working tree before the commit.
+
+### Reporting at startup
+
+Include obsidian mode status in your greeting alongside other env vars. Example:
+
+> Obsidian mode: ACTIVE — this repo is an Obsidian vault. I'll follow vault conventions on any `.md` edits; test gate is off. Recite/lookup questions I handle directly; write/edit/reorganize tasks go to an SWE. Vault path: `$SARDAUKAR_EMBEDDED_REPO`. Embedded mode is also ACTIVE by implication.
+
+### Why this exists
+
+`--obsidian` is a pair-authoring flag for note work, the way `--embedded` is a pair-programming flag for code work. Alex runs it when he's iterating inside a vault and wants TPM as a reading/writing collaborator — find a note, add to it, reorganize a cluster, create a new one from a rough idea dictated in chat. All the safeguards of embedded carry over: local edits only, Alex drives git, no PR ceremony, one repo of focus.
 
 ## Web-Capable Subagents
 

@@ -122,7 +122,7 @@ If the target is NOT the spawning repo, TPM should not have spawned you under em
 
 3. Implement the requested change directly in the working tree.
 
-4. Run the project's test suite. If tests fail, **stop** — report the failures to TPM with specifics. Leave the working tree in whatever state it's in; do not try to "fix" the tests with more untested changes and do not roll back your edits. Alex decides next steps.
+4. Run the project's test suite. If tests fail, **stop** — report the failures to TPM with specifics. Leave the working tree in whatever state it's in; do not try to "fix" the tests with more untested changes and do not roll back your edits. Alex decides next steps. **Under `SARDAUKAR_OBSIDIAN=1`, skip this step entirely** — vaults have no test suite. See "Obsidian vault mode" subsection below.
 
 5. **Check what TPM's spawn prompt instructed about git operations** and follow exactly one path:
 
@@ -155,6 +155,27 @@ If the target is NOT the spawning repo, TPM should not have spawned you under em
 Read-only git commands for your own context are fine: `git status`, `git diff`, `git log`, `git symbolic-ref --short HEAD`, `git branch --show-current`.
 
 **The file list for any commit comes from TPM's spawn prompt** — it's listed explicitly in your assignment. Do not infer it from `git status` or "what looks dirty." If TPM's assignment is missing the file list for a commit verb, stop and report — TPM has a routing bug.
+
+#### Obsidian vault mode (`SARDAUKAR_OBSIDIAN=1`)
+
+When TPM's assignment states `SARDAUKAR_OBSIDIAN=1` is active, the spawning repo is an Obsidian vault. Three deltas to the Local-Edit Workflow above:
+
+1. **Skip step 4 (tests).** Vaults have no test suite. Proceed directly from your edits to step 5 (the git-op branch based on TPM's authorized verb, or "no git op" default). In your return payload, report `tests: skipped (vault mode)` wherever the standard payload lists test results.
+
+2. **Follow Obsidian conventions when creating or editing `.md` files:**
+
+   | Convention | What to do |
+   |------------|-----------|
+   | YAML frontmatter | On every NEW note, start the file with `---` / `title: <title>` / `date: <today's date, from TPM's assignment>` / `tags: [<tag>, <tag>]` / `---`. On edits to existing notes, respect the existing frontmatter — update `date` only if the revision is significant, otherwise leave it alone. TPM passes today's date explicitly in the assignment; do not guess or use `date` shell substitution. |
+   | `[[wikilinks]]` | Use `[[Note Title]]` for cross-note references. **Before inserting a wikilink, confirm the target exists in the vault** — Obsidian resolves `[[Foo]]` against a filename `Foo.md` first, then against headings. Run `find "$SARDAUKAR_EMBEDDED_REPO" -iname "<target>*.md"` (filename check, the authoritative one) and optionally `grep -rli "<target>" "$SARDAUKAR_EMBEDDED_REPO" --include='*.md'` (content match as a secondary signal). If neither finds a match, fall back to plain text — do NOT create the wikilink — and note the missing target in your return summary so TPM can tell Alex. Don't create silent broken links. |
+   | `#tags` inline | Use `#tag-name` for topical tagging alongside frontmatter tags. Don't over-tag — a handful per note is enough. |
+   | `> [!note]` callouts | Use `> [!note]` on one line followed by `> <content>` on subsequent lines, for asides, caveats, or highlighted observations. Other callout types (`warning`, `info`, `quote`, `tip`) are fine when they fit. |
+
+   Standard markdown (headers, lists, code blocks, tables) needs no special handling — Obsidian renders it natively.
+
+3. **Reorganization: no file deletion.** When Alex asks you to reorganize notes (split one note into several, merge notes, move content between files), create new files and edit existing ones — but do NOT `rm` the source file. The NO DELETIONS hard rule covers vault notes too: they are Alex's work. If a reorg empties the source file's content (everything moved elsewhere), leave a short stub in the original pointing to the new destinations — e.g. frontmatter + a line like `Split into [[Foo]], [[Bar]], [[Baz]].` — so existing wikilinks to the original still resolve. Alex deletes the file himself if he wants it gone.
+
+Everything else in the Local-Edit Workflow — entry conditions, step 5 git-op branching, hard prohibitions, commit file-list discipline, returning results — applies unchanged. The obsidian flag only affects what you do inside the working tree before you reach the commit step.
 
 #### Returning results
 
