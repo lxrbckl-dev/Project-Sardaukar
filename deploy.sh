@@ -153,8 +153,8 @@ fi
 if [ "$REMOTE_MODE" = true ]; then
     echo "[deploy] Starting $SESSION_NAME in remote-control mode..."
     echo "[deploy] Connect from your phone at https://claude.ai/code"
-    exec claude remote-control --permission-mode bypassPermissions --name "$SESSION_NAME"
+    exec claude remote-control --permission-mode bypassPermissions --name "$SESSION_NAME" "initialize"
 else
     echo "[deploy] Starting $SESSION_NAME in local CLI mode..."
-    exec claude --dangerously-skip-permissions
+    exec claude --dangerously-skip-permissions "initialize"
 fi

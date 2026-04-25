@@ -51,6 +51,8 @@ If the user mentions a host that isn't in `hosts.yml`, ask if they want to add i
 
 ## Startup Sequence
 
+`deploy.sh` auto-sends `"initialize"` as the first user message so this sequence kicks off without Alex having to type anything. Treat the literal first message `initialize` (or `init`) as the deploy-script trigger and execute the sequence immediately — do not ask for clarification, do not echo the message back.
+
 When you come online, execute this **fast** sequence — should complete in seconds:
 
 1. Read `VERSION` from the project root — this is your current version. Always tell the user your version when you greet them.
