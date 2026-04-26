@@ -291,6 +291,8 @@ Do not silently clone another repo, do not run a shadow branch + PR flow in para
 
 Research/web tasks (reading docs, summarizing external pages, scraping) are not cross-repo code work and remain fine under embedded.
 
+Likewise, **writing notes to the Obsidian vault** under the "Project Notes in Obsidian" routing convention is not code work and is allowed under `--embedded`. Notes about the spawning repo's design / plans / ideas / decision logs go to `<vault>/Projects/<repo-name>/` per that section, just as in standard sessions. The vault is a separate working tree from `$SARDAUKAR_EMBEDDED_REPO`, so the local-edit-only rule and the single-SWE-on-the-working-tree rule do not apply to vault writes.
+
 ### Tests always run; never ship red
 
 SWE still runs the repo's test suite before any commit, under every authorized git verb. If tests fail, the commit does not happen — SWE reports the failures to TPM and the working tree stays dirty. Alex saying "just commit it" does NOT override this — if he really wants to skip tests, he commits it himself (and TPM should gently point out that's what the agent-doesn't-ship-red rule exists to catch).
@@ -439,7 +441,7 @@ Cache the discovered vault root and Projects path for the rest of the session.
 
 ### Per-project folder convention
 
-For a repo at `/Users/highlander/lxrbckl-dev/Project-DS`, the corresponding Obsidian folder is `<vault>/Projects/Project-DS/`. Use the repo directory basename (last path segment of `pwd`), preserving case.
+For a repo at `/Users/highlander/lxrbckl-dev/Project-DS`, the corresponding Obsidian folder is `<vault>/Projects/Project-DS/`. Use the repo directory basename, preserving case. Under `--embedded`, take the basename from `$SARDAUKAR_EMBEDDED_REPO`. In standard sessions, take it from the repo directory Alex is currently working in.
 
 If the work isn't tied to a repo (e.g., Alex says "let's plan a new project called Foo"), the project name is whatever Alex calls it. Ask if it's ambiguous.
 
@@ -454,6 +456,8 @@ If the per-project folder doesn't exist on the first note write of a session, cr
 | `LICENSE`, package manifests | Research notes, comparison tables, post-mortems |
 | `docs/` intended for end users (rare) | Anything informal — "thinking out loud" content |
 
+**Repo-resident specs are not informal notes.** `CLAUDE.md`, agent definitions in `.claude/agents/`, deploy scripts, runtime configs, and any document the repo's tooling depends on stay in the repo regardless of how "doc-like" they look. The vault rule covers working/scratch material — the kind of thing you'd otherwise drop into a `notes/` folder.
+
 When Alex says "let's plan X", "draft a doc about Y", "write up the approach for Z", "take notes on this", or similar: default to creating/editing a note in `<vault>/Projects/<project-name>/` unless he explicitly says "in the repo" or "as a markdown file in the codebase". The repo gets the README; Obsidian gets the rest.
 
 ### Obsidian conventions on these notes
@@ -463,7 +467,8 @@ Notes written under `<vault>/Projects/<project-name>/` follow the same vault for
 ### Who writes the note (TPM vs. SWE)
 
 - **TPM writes directly** for short notes, plan drafts, decision logs, single-file edits. Use `Write`/`Edit` against the vault path. No SWE spawn — note writing is not subagent work.
-- **Spawn an SWE** when the doc is substantial (multi-file architecture writeup, large research synthesis, reorganizing several existing notes). Pass the vault path and Obsidian conventions in the spawn prompt, same shape as `--obsidian` mode but without the embedded constraints (since this is a standard session, not embedded).
+- **Standard sessions only — spawn an SWE** when the doc is substantial (multi-file architecture writeup, large research synthesis, reorganizing several existing notes). Pass the vault path and Obsidian formatting conventions in the spawn prompt — same shape as the `--obsidian` mode prompt but with no embedded constraints.
+- **Under `--embedded`: TPM always writes vault notes directly.** Do not spawn an SWE for vault notes during embedded sessions. The embedded SWE spawn prompt is keyed to `$SARDAUKAR_EMBEDDED_REPO` and the working-tree-edit-only contract — re-pointing it at the vault risks the SWE editing the wrong directory or applying embedded git rules to the vault. Keep vault writes on the TPM side under embedded.
 
 ### Vault is not the spawning repo's working tree
 
@@ -667,6 +672,8 @@ Format:
 ```
 
 Log verbosely — every `gh` command, subagent deployment, and subagent result.
+
+Vault writes (Obsidian project notes) log to the same daily file the rest of the session is using.
 
 ## Version Management
 
