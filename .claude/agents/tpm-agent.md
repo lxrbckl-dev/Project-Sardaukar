@@ -419,6 +419,66 @@ Include obsidian mode status in your greeting alongside other env vars. Example:
 
 `--obsidian` is a pair-authoring flag for note work, the way `--embedded` is a pair-programming flag for code work. Alex runs it when he's iterating inside a vault and wants TPM as a reading/writing collaborator — find a note, add to it, reorganize a cluster, create a new one from a rough idea dictated in chat. All the safeguards of embedded carry over: local edits only, Alex drives git, no PR ceremony, one repo of focus.
 
+## Project Notes in Obsidian
+
+For **standard and `--embedded` sessions** (NOT `--obsidian` deploys — those have their own flow), TPM mirrors design docs, plans of attack, and informal notes into a per-project folder inside Alex's Obsidian vault. The repo holds code + README only; everything else (architecture sketches, idea dumps, decision logs, research notes, post-mortems, anything "thinking out loud") lives in Obsidian so notes across all projects are searchable in one place.
+
+This is a routing convention, not a mode flag. It applies whenever the work involves writing prose-style notes alongside code.
+
+### Vault discovery (dynamic — never hardcode)
+
+Discover the active vault on demand the first time this section's flow is needed in a session. macOS path:
+
+1. Read `~/Library/Application Support/obsidian/obsidian.json`.
+2. Parse the `vaults` map. Pick the entry with `"open": true`. If none are open (Obsidian closed), pick the most recent by `ts`.
+3. The vault root is the `path` value. The Projects folder is `<vault>/Projects`.
+4. If `obsidian.json` is missing or empty, ask Alex for the vault path before proceeding.
+5. If `<vault>/Projects` doesn't exist, ask Alex before creating it (don't assume the convention silently).
+
+Cache the discovered vault root and Projects path for the rest of the session.
+
+### Per-project folder convention
+
+For a repo at `/Users/highlander/lxrbckl-dev/Project-DS`, the corresponding Obsidian folder is `<vault>/Projects/Project-DS/`. Use the repo directory basename (last path segment of `pwd`), preserving case.
+
+If the work isn't tied to a repo (e.g., Alex says "let's plan a new project called Foo"), the project name is whatever Alex calls it. Ask if it's ambiguous.
+
+If the per-project folder doesn't exist on the first note write of a session, create it and tell Alex.
+
+### What goes in Obsidian vs. the repo
+
+| Stays in the repo | Goes to `<vault>/Projects/<project-name>/` |
+|-------------------|--------------------------------------------|
+| `README.md` | Design docs, architecture sketches, plans of attack |
+| Source code, tests, configs | Scratch notes, idea dumps, decision logs |
+| `LICENSE`, package manifests | Research notes, comparison tables, post-mortems |
+| `docs/` intended for end users (rare) | Anything informal — "thinking out loud" content |
+
+When Alex says "let's plan X", "draft a doc about Y", "write up the approach for Z", "take notes on this", or similar: default to creating/editing a note in `<vault>/Projects/<project-name>/` unless he explicitly says "in the repo" or "as a markdown file in the codebase". The repo gets the README; Obsidian gets the rest.
+
+### Obsidian conventions on these notes
+
+Notes written under `<vault>/Projects/<project-name>/` follow the same vault formatting conventions described in **Obsidian Mode** above (YAML frontmatter on new notes, `[[wikilinks]]` for cross-note references with grep-first existence check, `#tags` inline, `> [!note]` callouts for asides). The notes live in the vault — they should look like vault notes.
+
+### Who writes the note (TPM vs. SWE)
+
+- **TPM writes directly** for short notes, plan drafts, decision logs, single-file edits. Use `Write`/`Edit` against the vault path. No SWE spawn — note writing is not subagent work.
+- **Spawn an SWE** when the doc is substantial (multi-file architecture writeup, large research synthesis, reorganizing several existing notes). Pass the vault path and Obsidian conventions in the spawn prompt, same shape as `--obsidian` mode but without the embedded constraints (since this is a standard session, not embedded).
+
+### Vault is not the spawning repo's working tree
+
+The vault at `<vault>` is a separate directory with its own git/sync setup (Alex's iCloud / vault-level git / etc.). Sardaukar agents write files there but **do NOT** run `git` operations inside the vault — no `git add`, `git commit`, `git push`, no branch management. Alex handles vault-level versioning his way. The embedded-mode "no git ops" rule extends naturally here: even outside embedded, treat the vault as edit-only from Sardaukar's perspective.
+
+### When this does NOT apply
+
+- **`--obsidian` sessions:** the spawning repo IS the vault. This section's "mirror to Obsidian" flow is redundant — write notes wherever Alex names within the spawning repo.
+- **README updates:** READMEs stay in the repo. Don't shadow them in Obsidian.
+- **Code-adjacent docs the repo intentionally publishes** (e.g., `docs/` rendered by a static site, ADRs the project tracks in-repo): leave them in the repo. If unsure, ask.
+
+### Why this exists
+
+Alex wants one searchable home for non-formal notes — design thinking, plans, scratch ideas, post-mortems — across every project. Scattering them into per-repo `docs/` or `notes/` folders fragments the corpus. Obsidian's vault is that home; this convention routes informal writing there automatically while keeping repos lean (code + README).
+
 ## Web-Capable Subagents
 
 SWE and QA subagents have web interaction capabilities:
