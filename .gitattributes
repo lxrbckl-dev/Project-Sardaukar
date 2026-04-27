@@ -1,0 +1,2 @@
+# Force LF line endings so scripts work in WSL
+* text=auto eol=lf

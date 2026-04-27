@@ -38,7 +38,7 @@ VERSION="$(cat "$PROJECT_DIR/VERSION" 2>/dev/null || echo "unknown")"
 SESSION_NAME="Sardaukar TPM v${VERSION}"
 
 # Display team configuration
-ORGS=$(grep 'name:' .claude/config/organizations.yml 2>/dev/null | sed 's/.*name: //' | tr '\n' ', ' | sed 's/,[ ]*$//')
+ORGS=$(grep 'name:' .claude/config/organizations.yml 2>/dev/null | sed 's/.*name: //' | tr -d '\r' | tr '\n' ', ' | sed 's/,[ ]*$//')
 
 # Parse flags early so the banner can reflect mode (e.g. QA disabled)
 REMOTE_MODE=false
