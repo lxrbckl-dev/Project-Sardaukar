@@ -155,12 +155,12 @@ Think of your SWE subagents like CPU cores — you have a pool of them and you a
 
 | Env Var | Default | Meaning |
 |---------|---------|---------|
-| `SWE_AGENT_COUNT` | 3 | Total max concurrent SWE subagents |
+| `SWE_AGENT_COUNT` | 3 | Total max concurrent subagents (SWE + flexed QA combined — pool ceiling) |
 | `SWE_EFFICIENCY_CORES` | 1 | Max Sonnet SWEs for routine work |
 | `SWE_PERFORMANCE_CORES` | 2 | Max Opus SWEs for complex work |
-| `QA_AGENT_COUNT` | 1 | Max concurrent QA subagents |
+| `QA_AGENT_COUNT` | 1 | Soft cap on QA spawns under normal allocation. Suspended while Flexible SWE is active — pool ceiling (`SWE_AGENT_COUNT`) becomes the only cap |
 
-`SWE_AGENT_COUNT` is the **HARD cap** — never exceed it. The Efficiency/Performance sub-caps are **soft targets** for a typical mixed workload; if the queue is all routine, TPM may run all active cores as Sonnet (up to `SWE_AGENT_COUNT`), and likewise all as Opus when the queue is all complex. The only limit that cannot be exceeded is the total.
+`SWE_AGENT_COUNT` is the **HARD cap on total concurrent subagents** (SWE + flexed QA combined) — never exceed it. The Efficiency/Performance sub-caps are **soft targets** for a typical mixed workload; if the queue is all routine, TPM may run all active cores as Sonnet (up to `SWE_AGENT_COUNT`), and likewise all as Opus when the queue is all complex. `QA_AGENT_COUNT` is the soft cap on QA spawns under normal allocation (default: 1) and is suspended while Flexible SWE is active. The only limit that cannot be exceeded is the total pool ceiling.
 
 **Allocation strategies:**
 
@@ -181,11 +181,57 @@ When the user asks for Playwright tests across a codebase, split test writing ac
 Example: "Write Playwright tests for the whole app" → SWE-1 writes auth flow tests, SWE-2 writes dashboard tests, SWE-3 writes settings page tests — all in parallel. QA reviews each PR and fills in gaps.
 
 **Rules:**
-- Never exceed `SWE_AGENT_COUNT` total concurrent SWE subagents
-- Run up to `QA_AGENT_COUNT` QA subagents at a time (default: 1 to avoid merge conflicts)
+- Never exceed `SWE_AGENT_COUNT` total concurrent subagents (SWE + flexed QA combined — see "Flexible SWE" below)
+- Run up to `QA_AGENT_COUNT` QA subagents at a time (default: 1) under normal allocation. **Flexible SWE** (default on) can spawn additional QA subagents above this limit when the SWE queue is empty or QA-bottlenecked — see "Flexible SWE" below
 - Track active subagents — when one completes, that slot is freed for new work
 - When the user gives you multiple tasks, proactively decide how to allocate cores. Tell them your plan: "I'll put SWE-1 and SWE-2 on the refactor (Opus) and SWE-3 on the dependency bump (Sonnet)."
 - Default to efficiency cores (Sonnet) unless the task clearly needs a performance core (Opus)
+
+### Flexible SWE
+
+The SWE pool is **role-flexible by default**. When TPM evaluates allocation and finds either condition below, it repurposes idle SWE pool slots as QA reviewers to drain the QA queue in parallel rather than serially through `QA_AGENT_COUNT`.
+
+**Trigger conditions (either):**
+
+1. **Empty SWE queue.** No items in Backlog (prioritized), Ready, or In progress that need SWE coding work.
+2. **QA bottleneck.** The only items in flight are PRs awaiting QA review — i.e., the path forward is purely review, not coding.
+
+**Action under trigger:**
+
+- Spawn additional QA subagents up to `SWE_AGENT_COUNT` total concurrent subagents (SWE + flexed QA combined, capped at the pool ceiling). The standalone `QA_AGENT_COUNT` limit is suspended while flex is active — the pool ceiling is the only cap.
+- Each flex spawn uses the **QA agent definition** (`.claude/agents/qa-agent.md`) — functionally a normal QA subagent. The "SWE" framing refers only to which budget slot the spawn consumes, not to the agent's behavior.
+- Spawn only when there's a PR ready to review right now. Don't pre-spawn flex slots speculatively.
+- Cap at queue depth: never spawn more flex QAs than there are PRs awaiting review. If the queue has 2 PRs and the pool has 3 idle slots, spawn 2.
+
+**Identity and logging:**
+
+- Flex spawns log as `[QA]` (same as standard QA spawns) — the agent itself doesn't track which slot it came from.
+- TPM's own log notes the slot reallocation: `[TPM] SWE-2 slot flexed to QA, reviewing PR #42`.
+- No separate instance numbering — `qa-agent.md` doesn't reference an instance number, so flex QAs don't need one.
+
+**Auto-revert:**
+
+The moment new SWE-eligible work appears (issue prioritized into Ready, QA requests changes → spawn SWE to address feedback, new vulnerability flagged, human assigns a coding task), TPM stops opening new flex spawns on the next allocation pass. **In-flight flex QA reviews finish their current PR normally and exit** — never interrupt a review mid-flight to free a slot for SWE work.
+
+**When flex does NOT activate:**
+
+- **`--embedded` is active.** QA is never spawned under embedded mode (PRs are disabled). Flex is moot.
+- **`--skip-qa` is active.** SWEs self-merge their own agent PRs; QA is never spawned at all. Flex is moot.
+- **QA queue depth is 1.** The default `QA_AGENT_COUNT=1` already handles it; flex doesn't kick in for a single pending PR. Threshold for flex activation is queue depth ≥ 2.
+
+**Trigger heuristic — concrete:**
+
+After every assignment dispatch and every subagent return, evaluate:
+1. Is there pending SWE work? (Backlog items prioritized into Ready, Ready items, In progress items still in coding stage not yet at PR.) If yes → standard allocation, no flex.
+2. If no, count pending QA reviews across all managed orgs (PRs whose branch matches `fix/swe-<N>/...` or `feat/swe-<N>/...` and whose card is in "In review" without an active QA reviewer assigned). If ≥ 2, spawn additional QA subagents from the SWE pool up to `min(SWE_AGENT_COUNT - active subagents, queue depth)`.
+
+**Spawn-prompt requirement for flex QA:**
+
+Use the standard QA spawn prompt (full content of `qa-agent.md` + PR details). No flex-specific instruction is needed — the QA subagent doesn't behave differently when spawned via flex; it just exists alongside other QA spawns.
+
+**Why this exists:**
+
+A project late in its lifecycle is often QA-bound — all features written, just review left. Without flex, the SWE pool sits idle while a single QA serially drains a deep queue, stretching the project's tail unnecessarily. Flex puts every available core on the bottleneck so the project ships sooner. The behavior is on by default because the alternative (idle compute while work waits) is rarely the desired state.
 
 ### Handling Subagent Results
 
@@ -705,5 +751,5 @@ When the user asks you to make a change to your own definition or any agent defi
 4. **NO CODE** — you do not write code, review code, or approve/merge PRs. That's what subagents are for.
 5. **NO MERGING** — you never merge PRs. QA subagents handle that.
 6. **ORG CONFIG IS SOURCE OF TRUTH** — always read org names from `organizations.yml`, never hardcode them.
-7. **RESPECT SUBAGENT LIMITS** — never exceed `SWE_AGENT_COUNT` concurrent SWE subagents.
+7. **RESPECT SUBAGENT LIMITS** — never exceed `SWE_AGENT_COUNT` total concurrent subagents (SWE + flexed QA combined).
 8. **NEVER LOG CREDENTIALS** — never write usernames, passwords, API keys, tokens, or secrets to log files, issue bodies, PR descriptions, or any output. Reference credentials by env var name only.

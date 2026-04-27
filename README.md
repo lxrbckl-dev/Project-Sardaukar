@@ -177,8 +177,10 @@ Your single point of contact. Triages issues, manages kanban boards, spawns SWE/
 
 ### SWE subagents (ephemeral, up to N concurrent)
 
-Spawned by TPM when code work is needed. Create branches, write code, run tests, open PRs, and return results to TPM. Can browse the web, read documentation, scrape sites, interact with UIs via Playwright, and take/read screenshots. Each gets a unique identity (SWE-1, SWE-2, etc.) assigned at spawn time. Max concurrency controlled by `SWE_AGENT_COUNT` (default: 3).
+Spawned by TPM when code work is needed. Create branches, write code, run tests, open PRs, and return results to TPM. Can browse the web, read documentation, scrape sites, interact with UIs via Playwright, and take/read screenshots. Each gets a unique identity (SWE-1, SWE-2, etc.) assigned at spawn time. Max concurrency controlled by `SWE_AGENT_COUNT` (default: 3) — the pool ceiling for SWE + flexed QA combined.
 
-### QA subagent (ephemeral, 1 at a time)
+### QA subagent (ephemeral, 1 at a time by default — flexes higher)
 
 Spawned by TPM when a PR is ready for review. Reviews code, runs tests, approves/merges agent PRs, and returns results to TPM. For human-created PRs, reviews and comments but never merges.
+
+**Flexible SWE (default on):** when the SWE queue is empty or the project is bottlenecked by QA review, TPM repurposes idle SWE pool slots as additional QA reviewers — up to `SWE_AGENT_COUNT` total concurrent subagents — so a QA-heavy tail drains in parallel rather than serially. Auto-reverts when new SWE work appears. Inactive under `--embedded` and `--skip-qa`.

@@ -21,7 +21,7 @@ An autonomous DevOps agent platform that manages multiple GitHub organizations. 
 - **No new repos** — agents monitor and maintain existing repos only.
 - **Single source of truth for orgs** — `.claude/config/organizations.yml` is the only place org names and project board URLs are defined. Never hardcode org names in agent prompts or application code.
 - **TPM is the orchestrator** — runs via `claude remote-control`. SWE and QA are ephemeral subagents spawned via Claude's Agent tool. You drive the work.
-- **Configurable concurrency** — `SWE_AGENT_COUNT` (total cores, default: 3), `SWE_EFFICIENCY_CORES` (Sonnet, default: 1), `SWE_PERFORMANCE_CORES` (Opus, default: 2).
+- **Configurable concurrency** — `SWE_AGENT_COUNT` (pool ceiling for SWE + flexed QA combined, default: 3), `SWE_EFFICIENCY_CORES` (Sonnet, default: 1), `SWE_PERFORMANCE_CORES` (Opus, default: 2), `QA_AGENT_COUNT` (soft cap on QA spawns under normal allocation, default: 1; exceeded by Flexible SWE when SWE queue is empty or QA-bottlenecked).
 
 ---
 
@@ -50,7 +50,7 @@ The orchestrator. Does not write code. Spawns SWE and QA subagents.
 - Triages incoming issues — reads title/body, auto-labels
 - Spawns SWE subagents for code work, passing full context and assignment details
 - Spawns QA subagents when PRs are ready for review
-- Respects `SWE_AGENT_COUNT` for max concurrent SWE subagents (default: 3)
+- Respects `SWE_AGENT_COUNT` for max concurrent subagents (SWE + flexed QA combined, default: 3) — see "Flexible SWE" below
 - Ranks difficulty and routes model: Low/Medium → Sonnet, High → Opus
 - Manages **per-org kanban boards** (issue/PR tracking): Backlog → Ready → In progress → In review → Done
 - **Read-only** access to **SITMAP** (Alex's portfolio board at `lxrbckl-dev/projects/2`) — one card per `lxrbckl-dev` repo. Alex drives it; TPM only writes to backfill a brand-new repo in Backlog and notify him. See `.claude/agents/tpm-agent.md` for the full spec.
@@ -154,6 +154,8 @@ TPM allocates SWE subagents like CPU cores — efficiency cores for routine work
 | **Performance** | Opus | Complex refactors, multi-file changes, breaking change upgrades, hard debugging |
 
 TPM proactively decides allocation: "I'll put SWE-1 and SWE-2 on the refactor (Opus) and SWE-3 on the dependency bump (Sonnet)."
+
+**Flexible SWE (default on).** The SWE pool is role-flexible. When TPM finds either (1) the SWE queue completely empty or (2) the only items in flight are PRs awaiting QA review (a QA bottleneck), it repurposes idle SWE pool slots as additional QA reviewers — up to `SWE_AGENT_COUNT` total concurrent subagents — so the QA queue drains in parallel instead of serially through `QA_AGENT_COUNT`. Flex slots use the QA agent definition (functionally normal QA subagents) and revert automatically the moment new SWE-eligible work appears; in-flight flex reviews finish their PR before the slot is released. Inactive under `--embedded` (no QA spawns) and `--skip-qa` (SWEs self-merge). See `tpm-agent.md` → Flexible SWE for the full trigger heuristic.
 
 ---
 
@@ -308,6 +310,7 @@ These are non-negotiable and must be enforced in all agent definitions:
 | Board cleanup | Auto-archive Done items after 7 days | Keeps board clean, archived items still searchable |
 | Web tools | WebSearch + WebFetch + Playwright + native image reading | Full web capability suite for all agents |
 | QA bypass | `--skip-qa` flag on deploy | Skip the QA round-trip for trivial work; SWE self-merges its own agent PR |
+| Flexible SWE | SWE pool slots flex into QA reviewers when SWE queue is empty or QA-bottlenecked, default on | Late-stage projects are usually QA-bound; idle SWE compute while one QA drains a deep queue is wasted parallelism. Default-on because the alternative (idle pool waiting on serial QA) is rarely the desired behavior. Auto-reverts when SWE work returns; inactive under `--embedded` and `--skip-qa` |
 | Embedded mode | `--embedded` flag on deploy | HARDCORE session focus: ticket/board suppression + every message presumed about spawning repo + agents make local edits only on the currently-checked-out branch; Alex drives git ops explicitly (commit/push verbs operate on current branch, PRs are disabled, cross-repo is out of scope). `--skip-qa` is a no-op under embedded (no PR = no QA to skip) |
 | Obsidian mode | `--obsidian` flag on deploy | Specialization of `--embedded` for Obsidian vault repos: SWE subagents follow vault formatting conventions (YAML frontmatter, `[[wikilinks]]`, `#tags`, callouts) on `.md` edits and skip the test gate (vaults have no tests); TPM answers recite/lookup questions directly via `Read` without spawning an SWE. Implies `--embedded` — all embedded rules inherit. |
 | Project notes location | Mirror informal notes (design docs, plans, decision logs, research, post-mortems) to `<obsidian-vault>/Projects/<repo-name>/` during standard and `--embedded` sessions; vault path is discovered dynamically from `~/Library/Application Support/obsidian/obsidian.json`, never hardcoded | Centralize "thinking out loud" content in one searchable Obsidian vault; repos stay lean (code + README only). Does not apply under `--obsidian` (the spawning repo IS the vault) |

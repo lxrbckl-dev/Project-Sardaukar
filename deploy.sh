@@ -18,12 +18,12 @@ set -e
 export TPM_COUNT=1                # There can only be one TPM
 
 # SWE cores — like CPU cores, split between efficiency and performance
-export SWE_AGENT_COUNT=3          # Total max concurrent SWE subagents
+export SWE_AGENT_COUNT=3          # Total max concurrent subagents (SWE + flexed QA combined — pool ceiling)
 export SWE_EFFICIENCY_CORES=1     # Sonnet — routine tasks (dependency bumps, docs, simple fixes)
 export SWE_PERFORMANCE_CORES=2    # Opus — complex tasks (refactors, breaking changes, hard debugging)
 
 # QA — gatekeeper
-export QA_AGENT_COUNT=1           # Max concurrent QA subagents (1 recommended to avoid merge conflicts)
+export QA_AGENT_COUNT=1           # Soft cap on QA spawns under normal allocation. Flexible SWE (default on) can exceed this when SWE queue is empty or QA-bottlenecked, up to SWE_AGENT_COUNT total.
 # ───────────────────────────────────────────────────────────────────
 
 SPAWNING_PWD="$PWD"
