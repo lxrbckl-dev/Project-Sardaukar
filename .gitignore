@@ -26,3 +26,14 @@ sessions
 
 # Playwright screenshots — local debugging / verification, not committed
 tests/screenshots/
+
+# Safety net: stray image files at the Sardaukar repo root.
+# Sardaukar has no legitimate images at root — anything here is a Playwright leak
+# (SWE called browser_take_screenshot without an absolute path, MCP resolved against
+# its CWD which is Sardaukar's root). The per-project Playwright lifecycle in
+# swe-agent.md is the real fix; this catches anything that slips through.
+/*.png
+/*.jpg
+/*.jpeg
+/*.webp
+/*.gif

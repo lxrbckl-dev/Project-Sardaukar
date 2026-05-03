@@ -223,56 +223,106 @@ You have full web interaction capabilities. Use them whenever your assignment re
 - Pass a screenshot file path to the Read tool and Claude will see the image.
 - Use for OCR, visual verification, comparing before/after screenshots.
 
-### Screenshot Output Path
+### Per-project Playwright Lifecycle
 
-All ad-hoc Playwright screenshots — any image you capture via `browser_take_screenshot` (or equivalent) for verification, debugging, or research — must land in a gitignored path inside the **target repo's checkout**. Default path: `tests/screenshots/`. Always pass an explicit output path to the screenshot tool on every call — do NOT rely on Playwright MCP's default drop location (it writes to the current working directory, which is how Sardaukar's root got polluted).
+**Architectural fact:** the Playwright MCP server is launched once at TPM startup with one CWD (Sardaukar's root) and one process-level `--output-dir`. We cannot change its default mid-session. So Sardaukar's `.playwright-mcp/` will always be the ambient default for any tool call that doesn't pass an explicit path. Your job is to never leave Playwright artifacts in Sardaukar — every artifact you produce goes inside the **target repo's checkout** via absolute paths.
 
-**Target repo's checkout — resolves by flow:**
+**Two classes of artifact, two paths:**
 
-| Flow | Checkout path | Screenshot path |
-|------|---------------|-----------------|
-| Branch + PR (cloned to tmp) | `/tmp/<org>-<repo>-swe-<N>/` | `/tmp/<org>-<repo>-swe-<N>/tests/screenshots/` |
-| Embedded mode (spawning repo, in-place edits) | `$SARDAUKAR_EMBEDDED_REPO` | `$SARDAUKAR_EMBEDDED_REPO/tests/screenshots/` |
-| Any other local checkout TPM gives you | that checkout | `<that-checkout>/tests/screenshots/` |
+| Class | What it is | Where it goes | Retention |
+|-------|------------|---------------|-----------|
+| **Ephemeral debug** | Console-message dumps, accessibility snapshots, one-off verification shots, anything you capture mid-task that isn't referenced afterward | `<checkout>/.playwright-mcp/` | Sweep at task close — keep newest 10 of each artifact type, drop the rest |
+| **Intentional captures** | Screenshots referenced in PR descriptions, before/after pairs, fixture images for tests | `<checkout>/tests/screenshots/` (or the project's existing convention) | Kept; named descriptively; never overwritten |
 
-The "cloned repo happens to live in `/tmp`" case is fine — that whole tree IS the target checkout. The prohibition below is against dumping **loose** files in `/tmp` (or anywhere else).
+**Target checkout — resolves by flow:**
 
-**Never** write screenshots to:
-- The Sardaukar project root (where MCP used to drop them by default — root cause of the current mess).
+| Flow | Checkout path |
+|------|---------------|
+| Branch + PR (cloned to tmp) | `/tmp/<org>-<repo>-swe-<N>/` |
+| Embedded mode (spawning repo, in-place edits) | `$SARDAUKAR_EMBEDDED_REPO` |
+| Any other local checkout TPM gives you | that checkout |
+
+The "cloned repo happens to live in `/tmp`" case is fine — that whole tree IS the target checkout.
+
+**Never** write Playwright artifacts to:
+
+- Sardaukar's project root (where MCP defaults if you pass a bare filename — this is the leak we're preventing).
+- Sardaukar's `.playwright-mcp/` (the ambient default catches forgetful calls; don't aim there deliberately).
 - Loose files in `/tmp`, `$HOME`, `/var`, or any ad-hoc scratch location.
-- The target repo's own root (always the `tests/screenshots/` subdirectory, never directly in the repo root).
+- The target repo's own root (always under `<checkout>/.playwright-mcp/` or `<checkout>/tests/screenshots/`).
 
-**Setup — do this once, before the first screenshot of your task:**
+#### First-touch setup
 
-1. `mkdir -p <checkout>/tests/screenshots`.
+The first time you use Playwright in a target during a task, do this once:
 
-2. **If the target repo already has a different gitignored Playwright screenshot convention** (e.g., `screenshots/`, `e2e/screenshots/`, `test-output/screenshots/`), **use the existing convention instead** — don't fight the repo. Detect this by grepping `.gitignore` and `playwright.config.*` for `screenshot` before creating `tests/screenshots/`. If found, use that path for the rest of this rule.
+1. `mkdir -p <checkout>/.playwright-mcp <checkout>/tests/screenshots`.
 
-3. Confirm the chosen path is gitignored using `git check-ignore` — this is the authoritative check:
+2. **Detect existing conventions.** If the target repo already gitignores a different Playwright screenshot path (e.g., `screenshots/`, `e2e/screenshots/`, `test-output/screenshots/`), use the existing convention for intentional captures instead — don't fight the repo. Grep `.gitignore` and `playwright.config.*` for `screenshot` before defaulting to `tests/screenshots/`.
 
-   ```
-   git -C <checkout> check-ignore -q <path>/.sentinel && echo IGNORED || echo NOT_IGNORED
-   ```
-
-   If `NOT_IGNORED`, append to the target repo's `.gitignore`:
+3. **Verify both paths are gitignored** using `git check-ignore`:
 
    ```
-   # Playwright screenshots — local debugging / verification, not committed
+   git -C <checkout> check-ignore -q .playwright-mcp/.sentinel && echo IGNORED || echo NOT_IGNORED
+   git -C <checkout> check-ignore -q tests/screenshots/.sentinel && echo IGNORED || echo NOT_IGNORED
+   ```
+
+   If either is `NOT_IGNORED`, append the missing entries to `<checkout>/.gitignore`:
+
+   ```
+   # Playwright artifacts — debug trail and screenshots, not committed
+   .playwright-mcp/
    tests/screenshots/
    ```
 
-   Commit the `.gitignore` update inside whichever flow you're already on:
-   - Branch + PR: include in the feature branch (same PR as your work).
-   - Embedded mode (Local-Edit Workflow): the `.gitignore` edit is just another working-tree change — leave it dirty by default, or include it in the files you stage if Alex authorized a `commit` verb for this task. Never commit it without authorization.
-   - Pure debugging with no other code change: `.gitignore` tweak stands alone with a concise message — but only if Alex authorized a commit (embedded) or you're on the branch + PR flow.
+   Treat the `.gitignore` edit per the active flow:
+   - Branch + PR: include in your feature branch.
+   - Embedded mode: the `.gitignore` edit is a working-tree change — leave it dirty unless Alex authorized a commit verb that covers it.
+   - Standalone tweak with no other code change: only commit if Alex authorized it (embedded) or you're on the branch + PR flow.
 
-4. Use descriptive filenames scoped by feature / state / viewport: `landing-full-page-1440px.png`, `admin-login-after-logo-bump.png`. For before/after or time-series captures, append an ISO-8601 date: `footer-2026-04-19.png`. Never overwrite a prior screenshot you might want to compare against — pick a new filename instead.
+#### Path discipline — every tool call
 
-**Playwright test-runner artifacts are separate.** Videos, traces, HARs, and HTML reports produced by `npx playwright test` follow whatever `outputDir` / `reporter` paths `playwright.config.*` declares in the target repo (defaults `test-results/` and `playwright-report/`). Those paths must ALSO be gitignored in the target repo — add them the same way if missing. Do NOT redirect runner outputs into `tests/screenshots/`; mixing ad-hoc captures and runner outputs races when tests and debugging run concurrently, and some Playwright reporters clobber the directory between runs.
+Every Playwright tool call that produces a file MUST pass an absolute path inside the target checkout. No relative filenames. No bare basenames. Examples:
 
-**Research tasks with no target repo** — screenshots taken for pure research (e.g., "screenshot today's Fox News headlines") have no target repo to host them. Save them to a task-scoped temp dir `/tmp/swe-<N>-research/`, include the absolute paths in your return payload to TPM so it can read them, and `rm -rf /tmp/swe-<N>-research/` before you return. Never leave orphan images around for the next session to stumble on.
+- `browser_take_screenshot` → pass `filename: "<checkout>/.playwright-mcp/<descriptive-name>.png"` for ephemeral, or `<checkout>/tests/screenshots/<name>.png` for keepers.
+- Any tool that writes traces, HARs, or accessibility dumps → same rule, absolute path under `<checkout>/.playwright-mcp/`.
 
-**Playwright config itself lives in the target repo.** When you're setting up or extending a Playwright suite, put `playwright.config.*`, specs, fixtures, and page objects in the target repo — NOT in Sardaukar. Sardaukar ships the Playwright MCP server so agents can drive a browser; it does not house feature test suites.
+If you find yourself passing just `"foo.png"` without a directory, stop — that resolves against MCP's CWD (Sardaukar) and triggers the leak.
+
+#### Naming
+
+- **Ephemeral**: brief, scoped — `console-after-login-2026-05-03.log`, `snapshot-mobile-1440px.png`. Don't agonize; these get swept at task close.
+- **Intentional**: descriptive, scoped by feature / state / viewport — `landing-full-page-1440px.png`, `admin-login-after-logo-bump.png`. For before/after or time-series, append ISO-8601 date: `footer-2026-04-19.png`. Never overwrite a prior intentional capture.
+
+#### Task-close cleanup (mandatory)
+
+Before you return results to TPM, sweep ephemeral debug from `<checkout>/.playwright-mcp/`. The rule:
+
+- For each artifact-type pattern in `<checkout>/.playwright-mcp/` (`console-*.log`, `page-*.yml`, `snapshot-*.png`, etc.), keep the newest 10 by mtime, delete the rest.
+- **Do NOT touch `<checkout>/tests/screenshots/`** — those are keepers.
+- **Do NOT touch named files referenced in your PR description or return payload** — even if they live under `.playwright-mcp/`, they're effectively keepers for review purposes. Move them to `<checkout>/tests/screenshots/` before sweep, or skip them by exact filename.
+
+Reference sweep (adapt as needed):
+
+```bash
+cd <checkout>/.playwright-mcp
+for pat in 'console-*.log' 'page-*.yml' 'snapshot-*.png' 'trace-*.zip'; do
+  ls -t $pat 2>/dev/null | tail -n +11 | xargs rm -f 2>/dev/null
+done
+```
+
+The cleanup is part of your task, not optional — if you skip it, the project's `.playwright-mcp/` grows monotonically across sessions and turns back into noise.
+
+#### Test-runner artifacts are separate
+
+Videos, traces, HARs, and HTML reports produced by `npx playwright test` follow whatever `outputDir` / `reporter` paths `playwright.config.*` declares (defaults `test-results/` and `playwright-report/`). Those paths must ALSO be gitignored in the target repo — add them the same way if missing. Do NOT redirect runner outputs into `.playwright-mcp/` or `tests/screenshots/`; mixing ad-hoc and runner outputs races when tests and debugging run concurrently, and some Playwright reporters clobber the directory between runs.
+
+#### Research tasks with no target repo
+
+Screenshots taken for pure research (e.g., "screenshot today's Fox News headlines") have no target repo to host them. Save them to a task-scoped temp dir `/tmp/swe-<N>-research/`, include the absolute paths in your return payload to TPM so it can read them, and `rm -rf /tmp/swe-<N>-research/` before you return. Never leave orphan images around for the next session to stumble on.
+
+#### Playwright config itself lives in the target repo
+
+When you're setting up or extending a Playwright test suite, put `playwright.config.*`, specs, fixtures, and page objects in the target repo — NOT in Sardaukar. Sardaukar ships the Playwright MCP server so agents can drive a browser; it does not house feature test suites.
 
 ### Guidelines
 
@@ -325,6 +375,102 @@ Adapt based on what works on the target (e.g., `vm_stat` instead of `free` on BS
 - **NO modifying user accounts, SSH keys, or authorized_keys** unless the user explicitly asks.
 - **Read-only by default.** Only run commands that change state when the task explicitly requires it.
 - If you encounter a failure (host unreachable, auth failed, sudo required), report it to TPM with details — don't try to brute-force around it.
+
+## iOS App Deployment
+
+When TPM dispatches you for an iOS build/install task, you build the target repo via `xcodebuild` and install + launch it on Alex's iPhone via `xcrun devicectl`.
+
+### Prerequisites — already cleared, do NOT redo
+
+Alex has a paid Apple Developer Program account. The following are sticky and already in place:
+
+- PLA accepted
+- Apple ID added to Xcode → Settings → Accounts
+- Device registered at <https://developer.apple.com/account/resources/devices/list>
+- Developer Mode enabled on the iPhone
+- Developer profile trusted on the iPhone
+
+Skip directly to the build commands. Do NOT run any account-setup, device-registration, or trust flows.
+
+### Read the IDs
+
+Read `.claude/secrets/ios.yml` (in the Sardaukar repo, gitignored) for:
+
+- `team_id` — Apple Team ID
+- `bundle_id_prefix` — bundle ID prefix (e.g., `dev.lxrbckl`)
+- `iphone_udid` — UDID for `xcodebuild -destination 'platform=iOS,id=<udid>'`
+- `devicectl_id` — devicectl identifier for `xcrun devicectl device install/launch`
+
+If the file is missing, stop and report — TPM should have caught this upstream.
+
+### project.yml (xcodegen)
+
+If the target repo uses `xcodegen` (`project.yml` at the repo root), ensure `project.yml` includes:
+
+```yaml
+settings:
+  base:
+    DEVELOPMENT_TEAM: "<team_id from ios.yml>"
+    CODE_SIGN_STYLE: Automatic
+```
+
+Do NOT set `CODE_SIGNING_REQUIRED: "NO"` or `CODE_SIGNING_ALLOWED: "NO"` — those block device builds. After editing `project.yml`, regenerate with `xcodegen generate`. If `xcodegen` is missing, install via `brew install xcodegen`.
+
+If the repo does NOT use xcodegen (only `.xcodeproj`), set `DEVELOPMENT_TEAM` and `CODE_SIGN_STYLE = Automatic` directly in the target's build settings — but prefer raising it with TPM/Alex before mutating `.xcodeproj` directly.
+
+### 3-command deploy sequence
+
+Run from the target repo's root. Substitute `<Scheme>`, `<AppName>`, `<bundle-id>` from the repo (read `project.yml` or `xcodebuild -list` to discover); substitute `<iphone_udid>` and `<devicectl_id>` from `.claude/secrets/ios.yml`.
+
+```bash
+cd <target-repo>
+
+xcodebuild \
+  -scheme <Scheme> \
+  -destination "platform=iOS,id=<iphone_udid>" \
+  -derivedDataPath ./build \
+  -allowProvisioningUpdates \
+  build
+
+xcrun devicectl device install app \
+  --device <devicectl_id> \
+  ./build/Build/Products/Debug-iphoneos/<AppName>.app
+
+xcrun devicectl device process launch \
+  --device <devicectl_id> \
+  <bundle-id>
+```
+
+`-allowProvisioningUpdates` lets Xcode auto-create / refresh provisioning profiles using the team in `DEVELOPMENT_TEAM`. Don't strip it.
+
+### Build artifacts
+
+- Build output goes to `./build/` inside the target repo. Ensure `build/` is in the target repo's `.gitignore` — if missing, add it. Under `--embedded`, the `.gitignore` edit follows the standard rule: leave the change dirty unless Alex authorizes a commit verb on this turn.
+- Do NOT commit build artifacts under any flow.
+
+### Discovering IDs for new hardware
+
+If you can't reach the device with the IDs in `ios.yml` and Alex has hinted at a hardware change:
+
+- `xcrun devicectl list devices` → devicectl ID
+- `xcodebuild -showdestinations -scheme <Scheme>` → ECID/UDID for `xcodebuild`
+
+Report the discovered IDs to TPM. **Do NOT write to `.claude/secrets/ios.yml` yourself** — Alex updates it. Do NOT register a new device with Apple (that's a Developer-portal action for Alex).
+
+### Failure modes
+
+- **Build fails (signing/provisioning):** report the full `xcodebuild` output. Do NOT bypass code signing by setting `CODE_SIGNING_REQUIRED=NO` — that breaks device installs.
+- **Install fails (device offline, USB disconnected, locked):** report the exact `devicectl` error. Don't retry blindly.
+- **Launch fails:** the device may be locked, or the app may have crashed on launch. Report and let Alex check.
+- **Apple-side errors (revoked profile, expired membership):** escalate via TPM — these are not agent-fixable.
+
+### Hard rules for iOS deployment
+
+- Do NOT modify Apple-side state (developer portal, certificates, provisioning profiles via the portal API).
+- Do NOT register new devices with Apple — that's Alex's action.
+- Do NOT write to `.claude/secrets/ios.yml`.
+- Do NOT commit build artifacts.
+- Do NOT disable code signing to "make it work."
 
 ## Logging
 

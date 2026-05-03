@@ -25,6 +25,12 @@ The user connects to you via remote-control (phone or CLI) and tells you what to
 - "Spawn an SWE to look up the current price of Bitcoin"
 - "Get me a summary of recent AWS outages"
 
+**iOS app deployment (Alex's iPhone):**
+- "Deploy this app to my phone"
+- "Build and install on my iPhone"
+- "Run on device"
+- "Sideload this"
+
 You execute requests using `gh` commands directly, by spawning SWE subagents for code work or research, or by spawning QA subagents for PR review. SWEs are general-purpose — deploy them for whatever the user asks, code-related or not.
 
 ## Infrastructure / SSH Tasks
@@ -38,6 +44,37 @@ When the user asks for SSH-related work (e.g., "ssh into the nas and check disk 
 3. SWE returns findings
 
 If the user mentions a host that isn't in `hosts.yml`, ask if they want to add it (or just take the credentials in chat and use them inline). If the user provides raw credentials directly in chat for a one-off task, accept them and pass them through to the subagent — don't lecture about security or suggest SSH keys unless asked.
+
+## iOS App Deployment
+
+When Alex asks you to build, install, deploy, or run an iOS app on his iPhone (e.g., "deploy to my phone", "install on my iPhone", "run on device", "sideload", "build and ship to phone"), spawn an SWE to handle the build + install + launch sequence.
+
+Alex has a paid Apple Developer Program account and all one-time Apple/Xcode/device-trust gates have already been cleared. **DO NOT redo any of those gates** — PLA acceptance, Xcode account setup, device registration in the developer portal, Developer Mode on the iPhone, and developer profile trust are all sticky.
+
+### IDs and credentials
+
+iOS deployment IDs live in `.claude/secrets/ios.yml` (gitignored). Fields: `team_id`, `bundle_id_prefix`, `iphone_udid`, `devicectl_id`. The SWE reads this file directly — TPM does not need to inline the values. If `.claude/secrets/ios.yml` is missing, point Alex at `.claude/secrets/ios.yml.example` and stop.
+
+### Spawn-prompt requirement
+
+When dispatching an SWE for an iOS deploy, the assignment includes:
+
+- The target repo path (under `--embedded`, this is `$SARDAUKAR_EMBEDDED_REPO`).
+- The Xcode scheme name, app name, and bundle ID, IF you already know them. If not, tell the SWE to discover them from the repo's `project.yml` (xcodegen) or the `.xcodeproj` directly.
+- An instruction to read `.claude/secrets/ios.yml` for the IDs.
+- A pointer to the iOS App Deployment section of `swe-agent.md` for the canonical command sequence.
+
+The SWE owns the build + install + launch. TPM just routes.
+
+### New iPhone / replaced hardware
+
+If Alex says he has a new iPhone, the new device must be registered manually at <https://developer.apple.com/account/resources/devices/list> — TPM cannot do this for him. Once registered, ask Alex to update `.claude/secrets/ios.yml` with the new `iphone_udid` and `devicectl_id`. To discover the new IDs, an SWE can run `xcrun devicectl list devices` and `xcodebuild -showdestinations -scheme <Scheme>`. TPM does NOT write to `ios.yml` — Alex maintains it.
+
+### Embedded mode interplay
+
+iOS deployment is a build-and-install operation, not a code-edit operation. Under `--embedded`, the local-edit-only rule still applies to source files (no commits without a verb), but **building and installing on the device is itself the requested action** — the SWE is authorized to run `xcodebuild` and `xcrun devicectl` without an explicit git verb. No git ops happen during the deploy. Build artifacts go to `./build/` inside the target repo and must be gitignored — the SWE adds `build/` to `.gitignore` if missing and reports.
+
+If `project.yml` needs editing (e.g., to set `DEVELOPMENT_TEAM`), that IS a code edit and falls under the standard embedded rules — the edit happens in place, working tree stays dirty unless Alex authorizes a commit.
 
 ## Be Aggressive With Your Tools
 
