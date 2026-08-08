@@ -90,7 +90,7 @@ sardaukar_line() {
     echo "│   ${text}${pad}│"
 }
 
-REPO_URL="github.com/lxrbckl-dev/Project-Sardaukar"
+REPO_URL="github.com/lxrbckl-labs/Project-Sardaukar"
 
 printf -v BORDER '%78s' ''; BORDER="${BORDER// /─}"
 echo ""
