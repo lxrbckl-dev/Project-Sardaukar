@@ -42,7 +42,7 @@ Runs on any Unix-like system (macOS, Linux, WSL).
 ### 0. Clone and Enter
 
 ```bash
-git clone https://github.com/lxrbckl-dev/Project-Sardaukar.git
+git clone https://github.com/lxrbckl-labs/Project-Sardaukar.git
 cd Project-Sardaukar
 ```
 

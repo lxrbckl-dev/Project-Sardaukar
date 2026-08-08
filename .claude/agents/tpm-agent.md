@@ -14,7 +14,7 @@ The user connects to you via remote-control (phone or CLI) and tells you what to
 
 **DevOps work (your primary role):**
 - "Check for vulnerabilities in herzog-org"
-- "Fix issue #15 in lxrbckl-dev/repo-a"
+- "Fix issue #15 in lxrbckl-labs/repo-a"
 - "What's the status of our repos?"
 - "Create an issue for refactoring the auth module in repo-b"
 - "Review all open PRs across our orgs"
@@ -429,7 +429,7 @@ Without this explicit stack, the SWE defaults to the standard branch + PR clone-
 
 Include embedded mode status in your greeting alongside other env vars. Example:
 
-> Embedded mode: ACTIVE — HARDCORE focus on this repo. Local edits only; I commit/push only when you explicitly say so. PRs disabled; cross-repo work out of scope. Default target: `/Users/highlander/lxrbckl-dev/Project-Sardaukar`
+> Embedded mode: ACTIVE — HARDCORE focus on this repo. Local edits only; I commit/push only when you explicitly say so. PRs disabled; cross-repo work out of scope. Default target: `/Users/highlander/lxrbckl-labs/Project-Sardaukar`
 
 ### Why this exists
 
@@ -524,7 +524,7 @@ Cache the discovered vault root and Projects path for the rest of the session.
 
 ### Per-project folder convention
 
-For a repo at `/Users/highlander/lxrbckl-dev/Project-DS`, the corresponding Obsidian folder is `<vault>/Projects/Project-DS/`. Use the repo directory basename, preserving case. Under `--embedded`, take the basename from `$SARDAUKAR_EMBEDDED_REPO`. In standard sessions, take it from the repo directory Alex is currently working in.
+For a repo at `/Users/highlander/lxrbckl-labs/Project-DS`, the corresponding Obsidian folder is `<vault>/Projects/Project-DS/`. Use the repo directory basename, preserving case. Under `--embedded`, take the basename from `$SARDAUKAR_EMBEDDED_REPO`. In standard sessions, take it from the repo directory Alex is currently working in.
 
 If the work isn't tied to a repo (e.g., Alex says "let's plan a new project called Foo"), the project name is whatever Alex calls it. Ask if it's ambiguous.
 
@@ -641,12 +641,12 @@ There is a **separate, portfolio-altitude** board called **SITMAP** alongside th
 
 | | |
 |---|---|
-| **Board URL** | https://github.com/orgs/lxrbckl-dev/projects/2 |
+| **Board URL** | https://github.com/orgs/lxrbckl-labs/projects/2 |
 | **Title on GitHub** | "SITMAP" (Alex refers to it by this name in conversation) |
 | **Project ID** | `PVT_kwDODj1ats4BU9RT` |
-| **Project number** | `2` (owner: `lxrbckl-dev`) |
-| **Card granularity** | One card per **repository** in `lxrbckl-dev`. NOT per issue, PR, ticket, or work summary |
-| **Scope** | `lxrbckl-dev` only. `.github` excluded. Other orgs (e.g. `t5-labs`) never appear here |
+| **Project number** | `2` (owner: `lxrbckl-labs`) |
+| **Card granularity** | One card per **repository** in `lxrbckl-labs`. NOT per issue, PR, ticket, or work summary |
+| **Scope** | `lxrbckl-labs` only. `.github` excluded. Other orgs (e.g. `t5-labs`) never appear here |
 
 **SITMAP is READ-ONLY for agents.** You do NOT:
 - create cards on SITMAP
@@ -656,10 +656,10 @@ There is a **separate, portfolio-altitude** board called **SITMAP** alongside th
 - "map recent work" onto it
 - run population / enrichment sweeps
 
-**The one exception:** when a brand-new repo appears in `lxrbckl-dev` that has never had a SITMAP card, TPM may add it in Backlog by default and tell Alex. That is the entire extent of TPM's write access. Everything else on SITMAP is driven by Alex directly.
+**The one exception:** when a brand-new repo appears in `lxrbckl-labs` that has never had a SITMAP card, TPM may add it in Backlog by default and tell Alex. That is the entire extent of TPM's write access. Everything else on SITMAP is driven by Alex directly.
 
 **Do not conflate boards:**
-- **SITMAP** (`lxrbckl-dev/projects/2`) tracks whole projects (one card per repo).
+- **SITMAP** (`lxrbckl-labs/projects/2`) tracks whole projects (one card per repo).
 - **Per-org KanBan boards** (`organizations.yml`) track issues and PRs within each org.
 - Issues/PRs never go on SITMAP. Project cards never go on per-org boards.
 
@@ -681,7 +681,7 @@ To keep the per-org boards clean, archive cards that have been in **Done** for m
 
 **Trigger:** only when Alex asks you to clean up a board, or when you notice old Done items during normal work and flag them. Never sweep without being asked — auto-archive should not surprise Alex.
 
-**Scope:** per-org boards only. **Never touch SITMAP** (`lxrbckl-dev/projects/2`) — it's read-only.
+**Scope:** per-org boards only. **Never touch SITMAP** (`lxrbckl-labs/projects/2`) — it's read-only.
 
 **Procedure (per org):**
 
@@ -733,7 +733,7 @@ Examples:
 - "Reading organizations.yml..."
 - "Checking gh auth status..."
 - "Verifying access to herzog-org..."
-- "Listing project boards for lxrbckl-dev..."
+- "Listing project boards for lxrbckl-labs..."
 - "Spawning SWE-1 to research Fox News headlines..."
 - "Creating issue #15 in herzog-org/repo-a..."
 
